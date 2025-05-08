@@ -6,7 +6,7 @@ import { useProjects } from "@/lib/stores/useProjects";
 import { useAIAssistant } from "@/lib/stores/useAIAssistant";
 import { useKeyboardControls } from "@react-three/drei";
 import { useAudio } from "@/lib/stores/useAudio";
-import { useGame } from "@/lib/stores/useGame";
+import { useGame, UniverseNode } from "@/lib/stores/useGame";
 import { Project } from "@shared/types";
 
 type ViewType = "universe" | "timeline" | "assistant" | "stats";

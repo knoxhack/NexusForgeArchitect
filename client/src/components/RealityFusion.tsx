@@ -92,6 +92,9 @@ export default function RealityFusion() {
     return selectedItems.includes(itemId);
   };
   
+  // Get game store actions for universe nodes
+  const { createFusionNode, selectNode } = useGame();
+  
   // Handle starting the fusion process
   const handleStartFusion = () => {
     recordInteraction();
@@ -135,11 +138,28 @@ export default function RealityFusion() {
           .then(newFusion => {
             setCurrentFusion(newFusion);
             
+            // Create a universe node for this fusion
+            const fusionNodeId = createFusionNode(
+              fusionName,
+              selectedItems,
+              {
+                description: descriptionString,
+                fusionId: newFusion.id,
+                compatibility: newFusion.compatibility,
+                dateCreated: newFusion.dateCreated,
+                sourceTypes: selectedRealityData.map(item => item.type)
+              }
+            );
+            
             // Complete the process
             setTimeout(() => {
               setFusionInProgress(false);
               setShowResult(true);
               playSuccess();
+              
+              // Switch to the new node in the universe
+              selectNode(fusionNodeId);
+              
               addNotification({
                 title: "Fusion Complete",
                 message: `Reality fusion process completed successfully with ${newFusion.compatibility}% compatibility.`,
@@ -147,6 +167,17 @@ export default function RealityFusion() {
                 priority: "high",
                 source: "Reality Fusion"
               });
+              
+              // Add a specialized notification about the universe node
+              setTimeout(() => {
+                addNotification({
+                  title: "Universe Updated",
+                  message: "A new fusion node has been added to the universe. You can view it in the Universe view.",
+                  type: "info",
+                  priority: "medium",
+                  source: "NexusForge OS"
+                });
+              }, 2000);
             }, 500);
           })
           .catch(error => {
