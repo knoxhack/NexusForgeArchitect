@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Layers, Cpu, Video, Music, Code, FileText, Upload, RefreshCw, X, Check, AlertTriangle } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
@@ -10,124 +10,14 @@ import { Separator } from "./ui/separator";
 import { useAudio } from "../lib/stores/useAudio";
 import { useGame } from "../lib/stores/useGame";
 import { useNotifications } from "../lib/stores/useNotifications";
-
-// Define the types of reality data
-type RealityType = "model" | "video" | "audio" | "code" | "text";
-
-// Interface for reality data objects
-interface RealityData {
-  id: string;
-  name: string;
-  type: RealityType;
-  description: string;
-  dateCreated: string;
-  size: string;
-  tags: string[];
-  thumbnail?: string;
-}
-
-// Interface for fusion result
-interface FusionResult {
-  id: string;
-  name: string;
-  description: string;
-  sourceDataIds: string[];
-  dateCreated: string;
-  type: "fusion";
-  compatibility: number; // 0-100 score
-  status: "pending" | "processing" | "complete" | "failed";
-  previewImage?: string;
-}
-
-// Mock data for available reality data
-const mockRealityData: RealityData[] = [
-  {
-    id: "model1",
-    name: "Celestial Navigation Core",
-    type: "model",
-    description: "3D model of the navigation interface core structure",
-    dateCreated: "2025-04-15",
-    size: "24.5 MB",
-    tags: ["navigation", "core", "interface"],
-    thumbnail: "/images/model-thumbnail-1.jpg"
-  },
-  {
-    id: "model2",
-    name: "Project Node Representation",
-    type: "model",
-    description: "3D model for project nodes in the universe view",
-    dateCreated: "2025-04-18",
-    size: "12.8 MB",
-    tags: ["node", "project", "universe"],
-    thumbnail: "/images/model-thumbnail-2.jpg"
-  },
-  {
-    id: "video1",
-    name: "Multiversal Grid Animation",
-    type: "video",
-    description: "Animation showing the dynamic multiversal grid system",
-    dateCreated: "2025-04-20",
-    size: "45.2 MB",
-    tags: ["animation", "grid", "system"],
-    thumbnail: "/images/video-thumbnail-1.jpg"
-  },
-  {
-    id: "audio1",
-    name: "Neural Ambient Soundtrack",
-    type: "audio",
-    description: "Ambient sounds generated based on neural activity",
-    dateCreated: "2025-04-22",
-    size: "8.7 MB",
-    tags: ["ambient", "neural", "soundtrack"],
-    thumbnail: "/images/audio-thumbnail-1.jpg"
-  },
-  {
-    id: "code1",
-    name: "Reality Fusion Algorithm",
-    type: "code",
-    description: "Core algorithm implementation for reality fusion",
-    dateCreated: "2025-04-25",
-    size: "156 KB",
-    tags: ["algorithm", "fusion", "core"],
-    thumbnail: "/images/code-thumbnail-1.jpg"
-  },
-  {
-    id: "text1",
-    name: "Fusion Theory Documentation",
-    type: "text",
-    description: "Theoretical framework for reality fusion processes",
-    dateCreated: "2025-04-10",
-    size: "320 KB",
-    tags: ["documentation", "theory", "process"],
-    thumbnail: "/images/text-thumbnail-1.jpg"
-  }
-];
-
-// Mock data for past fusions
-const mockPastFusions: FusionResult[] = [
-  {
-    id: "fusion1",
-    name: "Interactive Navigation Model",
-    description: "Combined 3D model with code for interactive navigation",
-    sourceDataIds: ["model1", "code1"],
-    dateCreated: "2025-04-26",
-    type: "fusion",
-    compatibility: 92,
-    status: "complete",
-    previewImage: "/images/fusion-result-1.jpg"
-  },
-  {
-    id: "fusion2",
-    name: "Audiovisual Experience",
-    description: "Video animation with synchronized neural audio",
-    sourceDataIds: ["video1", "audio1"],
-    dateCreated: "2025-04-28",
-    type: "fusion",
-    compatibility: 88,
-    status: "complete",
-    previewImage: "/images/fusion-result-2.jpg"
-  }
-];
+import { 
+  useRealityFusion, 
+  performFusion,
+  getRealityDataById,
+  RealityType,
+  RealityData,
+  FusionResult
+} from "../lib/stores/useRealityFusion";
 
 // Helper function to get icon for reality type
 const getRealityIcon = (type: RealityType) => {
@@ -148,39 +38,58 @@ const getRealityIcon = (type: RealityType) => {
 };
 
 // Main component
-export function RealityFusion() {
-  const [selectedItems, setSelectedItems] = useState<RealityData[]>([]);
+export default function RealityFusion() {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [fusionInProgress, setFusionInProgress] = useState<boolean>(false);
   const [progressValue, setProgressValue] = useState<number>(0);
   const [currentFusion, setCurrentFusion] = useState<FusionResult | null>(null);
-  const [fusions, setFusions] = useState<FusionResult[]>(mockPastFusions);
   const [showResult, setShowResult] = useState<boolean>(false);
+  const [selectedRealityData, setSelectedRealityData] = useState<RealityData[]>([]);
+  
+  // Get data from our reality fusion store
+  const { 
+    realityData, 
+    fusionResults, 
+    selectedItems,
+    selectItem,
+    deselectItem,
+    clearSelection,
+    addFusionResult,
+    addRecentFusion
+  } = useRealityFusion();
   
   const { playSuccess, playError, playNotification } = useAudio();
   const { recordInteraction } = useGame();
   const { addNotification } = useNotifications();
   
+  // Update selected reality data when selectedItems changes
+  useEffect(() => {
+    const items = selectedItems
+      .map(id => realityData.find(item => item.id === id))
+      .filter((item): item is RealityData => !!item);
+    setSelectedRealityData(items);
+  }, [selectedItems, realityData]);
+  
   // Filter data based on active tab
   const filteredData = activeTab === "all" 
-    ? mockRealityData 
-    : mockRealityData.filter(item => item.type === activeTab);
+    ? realityData 
+    : realityData.filter(item => item.type === activeTab);
     
   // Handle selecting an item
   const handleSelectItem = (item: RealityData) => {
     recordInteraction();
     playNotification();
     
-    if (selectedItems.find(selected => selected.id === item.id)) {
-      setSelectedItems(selectedItems.filter(selected => selected.id !== item.id));
+    if (selectedItems.includes(item.id)) {
+      deselectItem(item.id);
     } else {
-      setSelectedItems([...selectedItems, item]);
+      selectItem(item.id);
     }
   };
   
   // Check if an item is selected
   const isSelected = (itemId: string) => {
-    return selectedItems.some(item => item.id === itemId);
+    return selectedItems.includes(itemId);
   };
   
   // Handle starting the fusion process
@@ -210,35 +119,47 @@ export function RealityFusion() {
         progress = 100;
         clearInterval(interval);
         
-        // Create a new fusion result
-        const newFusion: FusionResult = {
-          id: `fusion${fusions.length + 1}`,
-          name: `Fusion ${selectedItems.map(item => item.type.charAt(0).toUpperCase() + item.type.slice(1)).join("-")}`,
-          description: `Combined ${selectedItems.map(item => item.type).join(" and ")} for enhanced interaction`,
-          sourceDataIds: selectedItems.map(item => item.id),
-          dateCreated: new Date().toISOString().split("T")[0],
-          type: "fusion",
-          compatibility: Math.floor(70 + Math.random() * 30), // Random between 70-100
-          status: "complete",
-          previewImage: "/images/fusion-result-new.jpg"
-        };
+        // Create fusion name from selected items
+        const typesString = selectedRealityData
+          .map(item => item.type.charAt(0).toUpperCase() + item.type.slice(1))
+          .join("-");
         
-        setCurrentFusion(newFusion);
-        setFusions([newFusion, ...fusions]);
+        // Create description from selected items
+        const descriptionString = `Combined ${selectedRealityData.map(item => item.type).join(" and ")} for enhanced interaction`;
         
-        // Complete the process
-        setTimeout(() => {
-          setFusionInProgress(false);
-          setShowResult(true);
-          playSuccess();
-          addNotification({
-            title: "Fusion Complete",
-            message: `Reality fusion process completed successfully with ${newFusion.compatibility}% compatibility.`,
-            type: "success",
-            priority: "high",
-            source: "Reality Fusion"
+        // Use our performFusion helper to create the fusion
+        const fusionName = `Fusion ${typesString}`;
+        
+        // Process the fusion (simulated)
+        performFusion(selectedItems, fusionName, descriptionString)
+          .then(newFusion => {
+            setCurrentFusion(newFusion);
+            
+            // Complete the process
+            setTimeout(() => {
+              setFusionInProgress(false);
+              setShowResult(true);
+              playSuccess();
+              addNotification({
+                title: "Fusion Complete",
+                message: `Reality fusion process completed successfully with ${newFusion.compatibility}% compatibility.`,
+                type: "success",
+                priority: "high",
+                source: "Reality Fusion"
+              });
+            }, 500);
+          })
+          .catch(error => {
+            setFusionInProgress(false);
+            playError();
+            addNotification({
+              title: "Fusion Error",
+              message: error.message,
+              type: "error",
+              priority: "high",
+              source: "Reality Fusion"
+            });
           });
-        }, 500);
       }
       setProgressValue(progress);
     }, 200);
@@ -246,7 +167,7 @@ export function RealityFusion() {
   
   // Handle clearing selection
   const handleClearSelection = () => {
-    setSelectedItems([]);
+    clearSelection();
     playNotification();
   };
   
@@ -308,7 +229,7 @@ export function RealityFusion() {
               <div className="flex-1">
                 <ScrollArea className="h-[400px] rounded-md border">
                   <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredData.map((item) => (
+                    {filteredData.map((item: RealityData) => (
                       <div 
                         key={item.id}
                         className={`
@@ -334,7 +255,7 @@ export function RealityFusion() {
                           <span>{formatFileSize(item.size)}</span>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-1">
-                          {item.tags.map((tag, index) => (
+                          {item.tags.map((tag: string, index: number) => (
                             <Badge key={index} variant="outline" className="text-[10px]">
                               {tag}
                             </Badge>
@@ -368,7 +289,7 @@ export function RealityFusion() {
                 ) : (
                   <ScrollArea className="flex-1 mb-4">
                     <div className="space-y-2">
-                      {selectedItems.map((item) => (
+                      {selectedRealityData.map((item: RealityData) => (
                         <div 
                           key={item.id}
                           className="flex items-center gap-2 p-2 rounded-md bg-background border"
@@ -433,7 +354,7 @@ export function RealityFusion() {
               <h3 className="font-medium mb-4">Recent Fusion Results</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {fusions.map((fusion) => (
+                {fusionResults.map((fusion: FusionResult) => (
                   <div key={fusion.id} className="border rounded-md p-3 hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-medium">{fusion.name}</h4>
@@ -486,8 +407,8 @@ export function RealityFusion() {
                               <div className="text-sm font-medium mb-2">Source Data</div>
                               <div className="border rounded-md p-2 bg-muted/50">
                                 <ul className="text-sm space-y-1">
-                                  {fusion.sourceDataIds.map((id) => {
-                                    const source = mockRealityData.find(item => item.id === id);
+                                  {fusion.sourceDataIds.map((id: string) => {
+                                    const source = realityData.find(item => item.id === id);
                                     return source ? (
                                       <li key={id} className="flex items-center gap-2">
                                         {getRealityIcon(source.type)}
@@ -534,7 +455,7 @@ export function RealityFusion() {
             </div>
             
             <div className="mt-4 space-y-2">
-              {selectedItems.map((item, index) => (
+              {selectedRealityData.map((item: RealityData, index: number) => (
                 <div key={item.id} className="flex items-center gap-2">
                   {getRealityIcon(item.type)}
                   <div className="flex-1 text-sm">{item.name}</div>
@@ -603,7 +524,7 @@ export function RealityFusion() {
                   variant="outline"
                   onClick={() => {
                     setShowResult(false);
-                    setSelectedItems([]);
+                    clearSelection();
                   }}
                 >
                   Close
@@ -612,7 +533,7 @@ export function RealityFusion() {
                   onClick={() => {
                     playSuccess();
                     setShowResult(false);
-                    setSelectedItems([]);
+                    clearSelection();
                     addNotification({
                       title: "Fusion Exported",
                       message: "The fusion result has been exported to your project resources.",
@@ -633,5 +554,3 @@ export function RealityFusion() {
     </div>
   );
 }
-
-export default RealityFusion;
