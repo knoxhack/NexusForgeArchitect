@@ -36,22 +36,31 @@ function App() {
   const isMobile = useIsMobile();
   
   // Audio setup
-  const { setBackgroundMusic, setHitSound, setSuccessSound } = useAudio();
+  const { 
+    setBackgroundMusic, 
+    setHitSound, 
+    setSuccessSound, 
+    startBackgroundMusic, 
+    isMuted 
+  } = useAudio();
   
   // Load audio files
   useEffect(() => {
     // Only initialize audio when user has interacted with the page
     const handleInteraction = () => {
       const bgMusic = new Audio("/sounds/background.mp3");
-      bgMusic.loop = true;
-      bgMusic.volume = 0.3;
-      
       const hit = new Audio("/sounds/hit.mp3");
       const success = new Audio("/sounds/success.mp3");
       
+      // Set up audio with our store functions
       setBackgroundMusic(bgMusic);
       setHitSound(hit);
       setSuccessSound(success);
+      
+      // Start background music automatically if not muted
+      if (!isMuted) {
+        startBackgroundMusic();
+      }
       
       // Remove event listeners once audio is initialized
       document.removeEventListener("click", handleInteraction);
@@ -65,7 +74,7 @@ function App() {
       document.removeEventListener("click", handleInteraction);
       document.removeEventListener("keydown", handleInteraction);
     };
-  }, [setBackgroundMusic, setHitSound, setSuccessSound]);
+  }, [setBackgroundMusic, setHitSound, setSuccessSound, startBackgroundMusic, isMuted]);
   
   // Show the canvas once everything is loaded
   useEffect(() => {
