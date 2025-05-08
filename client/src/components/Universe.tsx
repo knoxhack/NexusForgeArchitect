@@ -8,6 +8,7 @@ import { useKeyboardControls } from "@react-three/drei";
 import { useAudio } from "@/lib/stores/useAudio";
 import { useGame, UniverseNode } from "@/lib/stores/useGame";
 import { Project } from "@shared/types";
+import { initialUniverseNodes, sampleAIPersonas } from "@/lib/data/sampleData";
 
 type ViewType = "universe" | "timeline" | "assistant" | "stats";
 
@@ -154,6 +155,24 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
   
   // Handle select key press
   const select = useKeyboardControls((state) => state.select);
+  
+  // Initialize the universe with sample data if it's empty
+  const { addNode } = useGame();
+  useEffect(() => {
+    if (universeNodes.length === 0) {
+      // Wait for a moment before adding sample data to ensure everything is loaded
+      const timer = setTimeout(() => {
+        // Add all initial universe nodes from sample data
+        initialUniverseNodes.forEach(node => {
+          addNode(node);
+        });
+        console.log("Universe initialized with sample data");
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [universeNodes.length, addNode]);
+  
   useEffect(() => {
     if (select && hovered !== null) {
       // Check if it's a project ID or a node ID
