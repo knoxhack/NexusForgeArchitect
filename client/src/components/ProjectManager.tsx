@@ -101,9 +101,9 @@ const ProjectManager: React.FC = () => {
   };
   
   return (
-    <div className="absolute top-24 right-6 w-96 h-[calc(100vh-180px)] bg-black/60 backdrop-blur-sm rounded-lg border border-gray-700 p-4 flex flex-col overflow-hidden">
-      <h2 className="text-2xl font-bold text-cyan-400 mb-2">Project Manager</h2>
-      <p className="text-gray-300 text-sm mb-4">
+    <div className="absolute top-20 md:top-24 right-2 md:right-6 w-[90vw] md:w-96 max-w-md h-[calc(100vh-140px)] md:h-[calc(100vh-180px)] bg-black/60 backdrop-blur-sm rounded-lg border border-gray-700 p-3 md:p-4 flex flex-col overflow-hidden">
+      <h2 className="text-xl md:text-2xl font-bold text-cyan-400 mb-1 md:mb-2">Project Manager</h2>
+      <p className="text-gray-300 text-xs md:text-sm mb-2 md:mb-4">
         Organize and manage your creative projects
       </p>
       

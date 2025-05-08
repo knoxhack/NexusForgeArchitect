@@ -4,6 +4,7 @@ import { useAudio } from "@/lib/stores/useAudio";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { useKeyboardControls } from "@react-three/drei";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 interface NavigationProps {
   activeView: string;
@@ -12,7 +13,9 @@ interface NavigationProps {
 
 const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView }) => {
   const [showHelp, setShowHelp] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const { isMuted, toggleMute, backgroundMusic } = useAudio();
+  const isMobile = useIsMobile();
   
   // Define a type-safe way to access keyboard controls
   const getControls = () => {
@@ -52,63 +55,86 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView }) =>
     }
   }, [backgroundMusic, isMuted]);
   
+  // Close mobile menu when view changes
+  useEffect(() => {
+    setShowMobileMenu(false);
+  }, [activeView]);
+  
   return (
     <>
       {/* Top navigation bar */}
-      <div className="absolute top-0 left-0 right-0 h-16 bg-black/60 backdrop-blur-sm border-b border-gray-700 z-10 flex items-center justify-between px-6">
+      <div className="absolute top-0 left-0 right-0 h-16 bg-black/60 backdrop-blur-sm border-b border-gray-700 z-10 flex items-center justify-between px-4 md:px-6">
         <div className="flex items-center">
-          <h1 className="text-2xl font-bold text-cyan-400 mr-8">NEXUSFORGE OS</h1>
+          <h1 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-cyan-400 ${isMobile ? 'mr-2' : 'mr-8'}`}>NEXUSFORGE OS</h1>
           
-          <div className="flex space-x-4">
+          {/* Desktop navigation */}
+          {!isMobile && (
+            <div className="flex space-x-4">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "text-gray-300 hover:text-white hover:bg-gray-800", 
+                  activeView === "universe" && "bg-gray-800 text-white"
+                )}
+                onClick={() => setActiveView("universe")}
+              >
+                Multiversal Grid
+              </Button>
+              
+              <Button
+                variant="ghost"
+                className={cn(
+                  "text-gray-300 hover:text-white hover:bg-gray-800", 
+                  activeView === "timeline" && "bg-gray-800 text-white"
+                )}
+                onClick={() => setActiveView("timeline")}
+              >
+                ChronoWeave Timeline
+              </Button>
+              
+              <Button
+                variant="ghost"
+                className={cn(
+                  "text-gray-300 hover:text-white hover:bg-gray-800", 
+                  activeView === "assistant" && "bg-gray-800 text-white"
+                )}
+                onClick={() => setActiveView("assistant")}
+              >
+                Nexi AI
+              </Button>
+              
+              <Button
+                variant="ghost"
+                className={cn(
+                  "text-gray-300 hover:text-white hover:bg-gray-800", 
+                  activeView === "stats" && "bg-gray-800 text-white"
+                )}
+                onClick={() => setActiveView("stats")}
+              >
+                Creator Stats
+              </Button>
+            </div>
+          )}
+          
+          {/* Mobile menu button */}
+          {isMobile && (
             <Button
               variant="ghost"
-              className={cn(
-                "text-gray-300 hover:text-white hover:bg-gray-800", 
-                activeView === "universe" && "bg-gray-800 text-white"
-              )}
-              onClick={() => setActiveView("universe")}
+              size="sm"
+              className="text-gray-300 hover:text-white hover:bg-gray-800"
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
             >
-              Multiversal Grid
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
             </Button>
-            
-            <Button
-              variant="ghost"
-              className={cn(
-                "text-gray-300 hover:text-white hover:bg-gray-800", 
-                activeView === "timeline" && "bg-gray-800 text-white"
-              )}
-              onClick={() => setActiveView("timeline")}
-            >
-              ChronoWeave Timeline
-            </Button>
-            
-            <Button
-              variant="ghost"
-              className={cn(
-                "text-gray-300 hover:text-white hover:bg-gray-800", 
-                activeView === "assistant" && "bg-gray-800 text-white"
-              )}
-              onClick={() => setActiveView("assistant")}
-            >
-              Nexi AI
-            </Button>
-            
-            <Button
-              variant="ghost"
-              className={cn(
-                "text-gray-300 hover:text-white hover:bg-gray-800", 
-                activeView === "stats" && "bg-gray-800 text-white"
-              )}
-              onClick={() => setActiveView("stats")}
-            >
-              Creator Stats
-            </Button>
-          </div>
+          )}
         </div>
         
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 md:space-x-4">
           <Button
             variant="ghost"
+            size={isMobile ? "sm" : "default"}
             className="text-gray-300 hover:text-white hover:bg-gray-800"
             onClick={toggleMute}
           >
@@ -126,6 +152,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView }) =>
           
           <Button
             variant="ghost"
+            size={isMobile ? "sm" : "default"}
             className="text-gray-300 hover:text-white hover:bg-gray-800"
             onClick={() => setShowHelp(true)}
           >
@@ -136,55 +163,128 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView }) =>
         </div>
       </div>
       
+      {/* Mobile menu dropdown */}
+      {isMobile && showMobileMenu && (
+        <div className="absolute top-16 left-0 right-0 bg-black/80 backdrop-blur-md z-20 border-b border-gray-700">
+          <div className="flex flex-col p-2">
+            <Button
+              variant="ghost"
+              className={cn(
+                "text-gray-300 hover:text-white hover:bg-gray-800 justify-start mb-1", 
+                activeView === "universe" && "bg-gray-800 text-white"
+              )}
+              onClick={() => setActiveView("universe")}
+            >
+              Multiversal Grid
+            </Button>
+            
+            <Button
+              variant="ghost"
+              className={cn(
+                "text-gray-300 hover:text-white hover:bg-gray-800 justify-start mb-1", 
+                activeView === "timeline" && "bg-gray-800 text-white"
+              )}
+              onClick={() => setActiveView("timeline")}
+            >
+              ChronoWeave Timeline
+            </Button>
+            
+            <Button
+              variant="ghost"
+              className={cn(
+                "text-gray-300 hover:text-white hover:bg-gray-800 justify-start mb-1", 
+                activeView === "assistant" && "bg-gray-800 text-white"
+              )}
+              onClick={() => setActiveView("assistant")}
+            >
+              Nexi AI
+            </Button>
+            
+            <Button
+              variant="ghost"
+              className={cn(
+                "text-gray-300 hover:text-white hover:bg-gray-800 justify-start", 
+                activeView === "stats" && "bg-gray-800 text-white"
+              )}
+              onClick={() => setActiveView("stats")}
+            >
+              Creator Stats
+            </Button>
+          </div>
+        </div>
+      )}
+      
       {/* Help dialog */}
       <Dialog open={showHelp} onOpenChange={setShowHelp}>
-        <DialogContent className="bg-gray-900 text-white border-gray-700">
+        <DialogContent className="bg-gray-900 text-white border-gray-700 max-w-lg w-[90vw] rounded-lg">
           <DialogHeader>
             <DialogTitle className="text-xl text-cyan-400">NEXUSFORGE OS: Controls & Help</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
-            <div>
-              <h3 className="font-bold text-white mb-2">Keyboard Controls</h3>
-              <ul className="space-y-2 text-gray-300">
-                <li className="flex justify-between">
-                  <span>W / Arrow Up</span>
-                  <span className="text-cyan-300">Move Forward</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>S / Arrow Down</span>
-                  <span className="text-cyan-300">Move Backward</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>A / Arrow Left</span>
-                  <span className="text-cyan-300">Move Left</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>D / Arrow Right</span>
-                  <span className="text-cyan-300">Move Right</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>Q</span>
-                  <span className="text-cyan-300">Zoom In</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>E</span>
-                  <span className="text-cyan-300">Zoom Out</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>Space</span>
-                  <span className="text-cyan-300">Select</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>M</span>
-                  <span className="text-cyan-300">Toggle Grid/Timeline</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>I</span>
-                  <span className="text-cyan-300">Toggle AI/Stats</span>
-                </li>
-              </ul>
-            </div>
+            {!isMobile && (
+              <div>
+                <h3 className="font-bold text-white mb-2">Keyboard Controls</h3>
+                <ul className="space-y-2 text-gray-300">
+                  <li className="flex justify-between">
+                    <span>W / Arrow Up</span>
+                    <span className="text-cyan-300">Move Forward</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>S / Arrow Down</span>
+                    <span className="text-cyan-300">Move Backward</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>A / Arrow Left</span>
+                    <span className="text-cyan-300">Move Left</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>D / Arrow Right</span>
+                    <span className="text-cyan-300">Move Right</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>Q</span>
+                    <span className="text-cyan-300">Zoom In</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>E</span>
+                    <span className="text-cyan-300">Zoom Out</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>Space</span>
+                    <span className="text-cyan-300">Select</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>M</span>
+                    <span className="text-cyan-300">Toggle Grid/Timeline</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>I</span>
+                    <span className="text-cyan-300">Toggle AI/Stats</span>
+                  </li>
+                </ul>
+              </div>
+            )}
+            
+            {isMobile && (
+              <div>
+                <h3 className="font-bold text-white mb-2">Touch Controls</h3>
+                <ul className="space-y-2 text-gray-300">
+                  <li className="flex justify-between">
+                    <span>Drag</span>
+                    <span className="text-cyan-300">Move Around</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>Pinch</span>
+                    <span className="text-cyan-300">Zoom In/Out</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>Tap</span>
+                    <span className="text-cyan-300">Select Object</span>
+                  </li>
+                </ul>
+              </div>
+            )}
             
             <div>
               <h3 className="font-bold text-white mb-2">View Descriptions</h3>

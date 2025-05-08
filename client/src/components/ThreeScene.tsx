@@ -10,6 +10,8 @@ import {
 import * as THREE from "three";
 import Universe from "./Universe";
 import { useGame } from "@/lib/stores/useGame";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import TouchControls from "./TouchControls";
 
 interface ThreeSceneProps {
   activeView: string;
@@ -21,8 +23,9 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
   const [targetPosition] = useState(new THREE.Vector3(0, 10, 20));
   const [targetLookAt] = useState(new THREE.Vector3(0, 0, 0));
   const { phase } = useGame();
+  const isMobile = useIsMobile();
   
-  // Extract keyboard controls
+  // Extract keyboard controls for desktop
   const forward = useKeyboardControls((state) => state.forward);
   const backward = useKeyboardControls((state) => state.backward);
   const leftward = useKeyboardControls((state) => state.leftward);
@@ -32,23 +35,26 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
   
   // Position the camera based on the active view
   useEffect(() => {
+    // Adjust camera position for mobile devices (bring it closer)
+    const mobileFactor = isMobile ? 0.7 : 1;
+    
     if (activeView === "universe") {
-      targetPosition.set(0, 10, 20);
+      targetPosition.set(0, 10 * mobileFactor, 20 * mobileFactor);
       targetLookAt.set(0, 0, 0);
     } else if (activeView === "timeline") {
-      targetPosition.set(0, 5, 15);
-      targetLookAt.set(0, 0, -5);
+      targetPosition.set(0, 5 * mobileFactor, 15 * mobileFactor);
+      targetLookAt.set(0, 0, -5 * mobileFactor);
     } else if (activeView === "assistant") {
-      targetPosition.set(5, 2, 10);
+      targetPosition.set(5 * mobileFactor, 2 * mobileFactor, 10 * mobileFactor);
       targetLookAt.set(0, 0, 0);
     } else if (activeView === "stats") {
-      targetPosition.set(-5, 8, 15);
+      targetPosition.set(-5 * mobileFactor, 8 * mobileFactor, 15 * mobileFactor);
       targetLookAt.set(0, 0, 0);
     }
     
     // Log the camera position change for debugging
     console.log(`Camera position changing to: ${targetPosition.x}, ${targetPosition.y}, ${targetPosition.z}`);
-  }, [activeView, targetPosition, targetLookAt]);
+  }, [activeView, targetPosition, targetLookAt, isMobile]);
   
   // Handle camera movement using keyboard controls
   useFrame((state, delta) => {
@@ -63,43 +69,45 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
     currentLookAt.copy(targetLookAt);
     state.camera.lookAt(currentLookAt);
     
-    // Handle keyboard navigation
-    if (forward) {
-      targetPosition.z -= speed;
-      targetLookAt.z -= speed;
-      console.log("Moving forward", targetPosition);
-    }
-    
-    if (backward) {
-      targetPosition.z += speed;
-      targetLookAt.z += speed;
-      console.log("Moving backward", targetPosition);
-    }
-    
-    if (leftward) {
-      targetPosition.x -= speed;
-      targetLookAt.x -= speed;
-      console.log("Moving left", targetPosition);
-    }
-    
-    if (rightward) {
-      targetPosition.x += speed;
-      targetLookAt.x += speed;
-      console.log("Moving right", targetPosition);
-    }
-    
-    if (zoom) {
-      // Zoom in by moving camera closer to target
-      const direction = new THREE.Vector3().subVectors(targetLookAt, targetPosition).normalize();
-      targetPosition.addScaledVector(direction, zoomSpeed);
-      console.log("Zooming in", targetPosition);
-    }
-    
-    if (unzoom) {
-      // Zoom out by moving camera away from target
-      const direction = new THREE.Vector3().subVectors(targetLookAt, targetPosition).normalize();
-      targetPosition.addScaledVector(direction, -zoomSpeed);
-      console.log("Zooming out", targetPosition);
+    // Handle keyboard navigation (for desktop)
+    if (!isMobile) {
+      if (forward) {
+        targetPosition.z -= speed;
+        targetLookAt.z -= speed;
+        console.log("Moving forward", targetPosition);
+      }
+      
+      if (backward) {
+        targetPosition.z += speed;
+        targetLookAt.z += speed;
+        console.log("Moving backward", targetPosition);
+      }
+      
+      if (leftward) {
+        targetPosition.x -= speed;
+        targetLookAt.x -= speed;
+        console.log("Moving left", targetPosition);
+      }
+      
+      if (rightward) {
+        targetPosition.x += speed;
+        targetLookAt.x += speed;
+        console.log("Moving right", targetPosition);
+      }
+      
+      if (zoom) {
+        // Zoom in by moving camera closer to target
+        const direction = new THREE.Vector3().subVectors(targetLookAt, targetPosition).normalize();
+        targetPosition.addScaledVector(direction, zoomSpeed);
+        console.log("Zooming in", targetPosition);
+      }
+      
+      if (unzoom) {
+        // Zoom out by moving camera away from target
+        const direction = new THREE.Vector3().subVectors(targetLookAt, targetPosition).normalize();
+        targetPosition.addScaledVector(direction, -zoomSpeed);
+        console.log("Zooming out", targetPosition);
+      }
     }
   });
   
@@ -122,7 +130,7 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
       <Stars 
         radius={100}
         depth={50}
-        count={5000}
+        count={isMobile ? 3000 : 5000} // Reduce stars count on mobile for better performance
         factor={4}
         saturation={0}
         fade
@@ -130,10 +138,18 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
       />
       
       {/* Main universe visualization */}
-      <Universe activeView={activeView} />
+      <Universe activeView={activeView} isMobile={isMobile} />
       
       {/* Environment lighting for better 3D object appearance */}
       <Environment preset="night" />
+      
+      {/* Add touch controls for mobile */}
+      {isMobile && (
+        <TouchControls 
+          targetPosition={targetPosition} 
+          targetLookAt={targetLookAt} 
+        />
+      )}
     </>
   );
 };

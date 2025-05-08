@@ -10,9 +10,10 @@ import { Project } from "@shared/types";
 
 interface UniverseProps {
   activeView: string;
+  isMobile?: boolean;
 }
 
-const Universe: React.FC<UniverseProps> = ({ activeView }) => {
+const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => {
   const { projects, selectedProject, selectProject } = useProjects();
   const { aiPersonas } = useAIAssistant();
   const groupRef = useRef<THREE.Group>(null);
@@ -35,10 +36,15 @@ const Universe: React.FC<UniverseProps> = ({ activeView }) => {
   
   // Calculate positions for project nodes in 3D space
   const projectPositions = useMemo(() => {
+    // For mobile, make the spiral more compact for easier viewing
+    const spiralFactor = isMobile ? 0.4 : 0.5;
+    const radiusBase = isMobile ? 3 : 4;
+    const radiusIncrement = isMobile ? 0.6 : 0.8;
+    
     return projects.map((project, index) => {
       // Arrange projects in a spiral galaxy formation
-      const angle = index * 0.5;
-      const radius = 4 + index * 0.8;
+      const angle = index * spiralFactor;
+      const radius = radiusBase + index * radiusIncrement;
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
       
@@ -51,7 +57,7 @@ const Universe: React.FC<UniverseProps> = ({ activeView }) => {
       
       return new THREE.Vector3(x, y, z);
     });
-  }, [projects]);
+  }, [projects, isMobile]);
   
   // Calculate project connections (lines between related projects)
   const projectConnections = useMemo(() => {
@@ -129,64 +135,72 @@ const Universe: React.FC<UniverseProps> = ({ activeView }) => {
       </mesh>
       
       {/* Project nodes */}
-      {projects.map((project, index) => (
-        <group 
-          key={project.id} 
-          position={projectPositions[index]}
-          onClick={() => {
-            selectProject(project.id);
-            playHit();
-          }}
-          onPointerOver={() => setHovered(index)}
-          onPointerOut={() => setHovered(null)}
-        >
-          {/* Project sphere */}
-          <mesh>
-            <sphereGeometry args={[0.6, 16, 16]} />
-            <meshStandardMaterial 
-              color={project.type === "video" ? "#f04a4a" : 
-                     project.type === "model" ? "#4af04a" : 
-                     project.type === "audio" ? "#f0e54a" : 
-                     "#4a9df0"}
-              roughness={0.3}
-              metalness={0.8}
-              map={project.type === "video" ? woodTexture : 
-                   project.type === "model" ? grassTexture : 
-                   project.type === "audio" ? sandTexture : 
-                   skyTexture}
-            />
-          </mesh>
-          
-          {/* Text label */}
-          <Text
-            position={[0, 1, 0]}
-            fontSize={0.3}
-            color="white"
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.02}
-            outlineColor="#000000"
+      {projects.map((project, index) => {
+        // Adjust sizes for mobile
+        const sphereSize = isMobile ? 0.8 : 0.6;
+        const fontSize = isMobile ? 0.4 : 0.3;
+        const labelYOffset = isMobile ? 1.2 : 1.0;
+        
+        return (
+          <group 
+            key={project.id} 
+            position={projectPositions[index]}
+            onClick={() => {
+              selectProject(project.id);
+              playHit();
+            }}
+            onPointerOver={() => setHovered(index)}
+            onPointerOut={() => setHovered(null)}
           >
-            {project.title}
-          </Text>
-          
-          {/* Show details on hover or selection */}
-          {(hovered === index || selectedProject?.id === project.id) && (
-            <Html
-              position={[0, -1, 0]}
-              center
-              distanceFactor={15}
-              occlude
+            {/* Project sphere */}
+            <mesh>
+              <sphereGeometry args={[sphereSize, isMobile ? 12 : 16, isMobile ? 12 : 16]} />
+              <meshStandardMaterial 
+                color={project.type === "video" ? "#f04a4a" : 
+                       project.type === "model" ? "#4af04a" : 
+                       project.type === "audio" ? "#f0e54a" : 
+                       "#4a9df0"}
+                roughness={0.3}
+                metalness={0.8}
+                map={project.type === "video" ? woodTexture : 
+                     project.type === "model" ? grassTexture : 
+                     project.type === "audio" ? sandTexture : 
+                     skyTexture}
+              />
+            </mesh>
+            
+            {/* Text label - larger on mobile for better visibility */}
+            <Text
+              position={[0, labelYOffset, 0]}
+              fontSize={fontSize}
+              color="white"
+              anchorX="center"
+              anchorY="middle"
+              outlineWidth={0.02}
+              outlineColor="#000000"
+              maxWidth={isMobile ? 3 : 2}
             >
-              <div className="bg-black/80 p-2 rounded text-white border border-cyan-500 text-xs w-40">
-                <p className="font-bold">{project.title}</p>
-                <p className="opacity-80">{project.type}</p>
-                <p className="text-cyan-300 mt-1 text-[10px]">Last updated: {new Date(project.updatedAt).toLocaleDateString()}</p>
-              </div>
-            </Html>
-          )}
-        </group>
-      ))}
+              {project.title}
+            </Text>
+            
+            {/* Show details on hover or selection - simplified for mobile */}
+            {(hovered === index || selectedProject?.id === project.id) && (
+              <Html
+                position={[0, -1.2, 0]}
+                center
+                distanceFactor={isMobile ? 10 : 15}
+                occlude
+              >
+                <div className={`bg-black/80 p-2 rounded text-white border border-cyan-500 ${isMobile ? 'text-sm w-48' : 'text-xs w-40'}`}>
+                  <p className="font-bold">{project.title}</p>
+                  <p className="opacity-80">{project.type}</p>
+                  <p className="text-cyan-300 mt-1 text-[10px]">Last updated: {new Date(project.updatedAt).toLocaleDateString()}</p>
+                </div>
+              </Html>
+            )}
+          </group>
+        );
+      })}
       
       {/* Connection lines between related projects */}
       {projectConnections.map((connection, index) => {
@@ -217,17 +231,21 @@ const Universe: React.FC<UniverseProps> = ({ activeView }) => {
       
       {/* AI Personas floating in the universe */}
       {aiPersonas.map((persona, index) => {
-        // Position personas in a ring around the center
+        // Position personas in a ring around the center - adjust for mobile
         const angle = (index / aiPersonas.length) * Math.PI * 2;
-        const radius = 8;
+        const radius = isMobile ? 6 : 8; // Smaller radius on mobile
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
         const y = 3 + Math.sin(angle * 2) * 0.5; // Slight vertical variation
         
+        // Increase size on mobile for better visibility
+        const shapeSize = isMobile ? 1.0 : 0.8;
+        const textSize = isMobile ? 0.5 : 0.4;
+        
         return (
           <group key={persona.id} position={[x, y, z]}>
             <mesh>
-              <octahedronGeometry args={[0.8, 0]} />
+              <octahedronGeometry args={[shapeSize, 0]} />
               <meshStandardMaterial 
                 color={persona.color} 
                 emissive={persona.color}
@@ -235,16 +253,31 @@ const Universe: React.FC<UniverseProps> = ({ activeView }) => {
               />
             </mesh>
             <Text
-              position={[0, 1.2, 0]}
-              fontSize={0.4}
+              position={[0, 1.3, 0]}
+              fontSize={textSize}
               color="white"
               anchorX="center"
               anchorY="middle"
               outlineWidth={0.02}
               outlineColor="#000000"
+              maxWidth={isMobile ? 3 : 2}
             >
               {persona.name}
             </Text>
+            
+            {/* Touch hint for mobile users */}
+            {isMobile && (
+              <Html
+                position={[0, -1, 0]}
+                center
+                distanceFactor={10}
+                occlude
+              >
+                <div className="bg-black/60 px-2 py-1 rounded text-white border border-cyan-500 text-[10px]">
+                  <p className="text-center">Tap to select</p>
+                </div>
+              </Html>
+            )}
           </group>
         );
       })}
