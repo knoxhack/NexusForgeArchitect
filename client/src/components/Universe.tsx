@@ -1,14 +1,14 @@
 import React, { useRef, useMemo, useEffect, useState } from "react";
-import { useFrame, useLoader, useThree } from "@react-three/fiber";
-import { Text, useTexture, Html, Sphere, useGLTF } from "@react-three/drei";
+import { useFrame, useThree } from "@react-three/fiber";
+import { Text, useTexture, Html, useKeyboardControls, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { useProjects } from "@/lib/stores/useProjects";
 import { useAIAssistant } from "@/lib/stores/useAIAssistant";
-import { useKeyboardControls } from "@react-three/drei";
 import { useAudio } from "@/lib/stores/useAudio";
-import { useGame, UniverseNode } from "@/lib/stores/useGame";
+import { useGame } from "@/lib/stores/useGame";
 import { Project } from "@shared/types";
-import { initialUniverseNodes, sampleAIPersonas } from "@/lib/data/sampleData";
+import { initialUniverseNodes } from "@/lib/data/sampleData";
+import { UniverseNode } from "@/lib/types/universe";
 
 type ViewType = "universe" | "timeline" | "assistant" | "stats";
 
@@ -19,7 +19,6 @@ interface UniverseProps {
 
 const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => {
   const { projects, selectedProject, selectProject } = useProjects();
-  const { aiPersonas } = useAIAssistant();
   const { viewMode, recordInteraction, universeNodes, selectedNodeId, selectNode } = useGame();
   const groupRef = useRef<THREE.Group>(null);
   const { playHit } = useAudio();
@@ -173,6 +172,7 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
     }
   }, [universeNodes.length, addNode]);
   
+  // Selection handling
   useEffect(() => {
     if (select && hovered !== null) {
       // Check if it's a project ID or a node ID
@@ -242,380 +242,315 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
         groupRef.current.children[hoveredNodeIndex].scale.set(scale, scale, scale);
       }
     }
-    
-    // In GodMode, apply subtle pulsing to all projects
-    if (viewMode === "godmode" && groupRef.current) {
-      const time = state.clock.getElapsedTime();
-      
-      // Apply to project nodes (skip the central node)
-      projects.forEach((project, index) => {
-        if (project.id !== hovered) { // Don't override the hovered animation
-          const projectNode = groupRef.current?.children[index + 1]; // +1 because of the central node
-          if (projectNode) {
-            // Offset the time for each project to create a wave effect
-            const offsetTime = time + index * 0.2;
-            const baseScale = 1 + Math.sin(offsetTime * 1.5) * 0.03;
-            projectNode.scale.set(baseScale, baseScale, baseScale);
-          }
-        }
-      });
-      
-      // Apply to fusion nodes as well
-      fusionNodesWithPositions.forEach((node, index) => {
-        if (node.id !== hovered) {
-          // Fusion nodes come after projects + central node + connections
-          const nodeIndex = 1 + projects.length + projectConnections.length + fusionConnections.length + index;
-          const fusionNode = groupRef.current?.children[nodeIndex];
-          if (fusionNode) {
-            // Create a different wave pattern for fusion nodes
-            const offsetTime = time + index * 0.3 + Math.PI; // offset by PI for varied effect
-            const baseScale = 1 + Math.sin(offsetTime * 1.2) * 0.04;
-            fusionNode.scale.set(baseScale, baseScale, baseScale);
-          }
-        }
-      });
-      
-      // Record interaction periodically in GodMode to track engagement
-      if (Math.floor(time) % 5 === 0 && Math.floor(time * 10) % 10 === 0) {
-        recordInteraction();
-      }
-    }
   });
+
+  // Track if universe is active for camera positioning
+  const { camera } = useThree();
+  const [isActive, setIsActive] = useState(false);
+  
+  // Setup camera position when switching to universe view
+  useEffect(() => {
+    if (activeView === 'universe' && !isActive) {
+      camera.position.set(0, 5, 15);
+      setIsActive(true);
+    } else if (activeView !== 'universe' && isActive) {
+      setIsActive(false);
+    }
+  }, [activeView, camera, isActive]);
+  
+  // Calculate time-based colors for core
+  const getTimeBasedColor = () => {
+    const now = new Date();
+    const hour = now.getHours();
+    
+    // Different color palettes based on time of day
+    if (hour >= 5 && hour < 10) {
+      // Morning - warm golden colors
+      return "#ff9a00";
+    } else if (hour >= 10 && hour < 16) {
+      // Day - bright blue to cyan
+      return "#00b3ff";
+    } else if (hour >= 16 && hour < 20) {
+      // Evening - orange to purple sunset
+      return "#ff5500";
+    } else {
+      // Night - deep blues to purples
+      return "#0a004d";
+    }
+  };
+  
+  // Core color based on current time
+  const coreColor = useMemo(() => getTimeBasedColor(), []);
   
   return (
-    <group ref={groupRef}>
-      {/* Central hub/core of the universe */}
-      <mesh position={[0, 0, 0]}>
-        <sphereGeometry args={[1.5, 32, 32]} />
-        <meshStandardMaterial 
-          color="#00b3ff" 
-          emissive="#0077ff"
-          emissiveIntensity={2}
-          toneMapped={false}
+    <>
+      {/* Orbit controls for user interaction */}
+      {activeView === "universe" && (
+        <OrbitControls
+          enablePan={false}
+          enableZoom={true}
+          maxDistance={40}
+          minDistance={5}
+          enableDamping={true}
+          dampingFactor={0.05}
         />
-      </mesh>
+      )}
       
-      {/* Project nodes */}
-      {projects.map((project, index) => {
-        // Adjust sizes for mobile
-        const sphereSize = isMobile ? 0.8 : 0.6;
-        const fontSize = isMobile ? 0.4 : 0.3;
-        const labelYOffset = isMobile ? 1.2 : 1.0;
+      {/* Basic scene lighting */}
+      <ambientLight intensity={0.3} />
+      <directionalLight position={[5, 10, 5]} intensity={0.8} />
+      <pointLight position={[0, 0, 0]} intensity={1.5} distance={20} color={coreColor} />
+      
+      {/* Main universe group */}
+      <group ref={groupRef}>
+        {/* Central hub/core of the universe */}
+        <mesh position={[0, 0, 0]}>
+          <sphereGeometry args={[1.5, 32, 32]} />
+          <meshStandardMaterial 
+            color={coreColor} 
+            emissive={coreColor}
+            emissiveIntensity={1.5}
+            metalness={0.8}
+            roughness={0.2}
+          />
+        </mesh>
         
-        return (
-          <group 
-            key={project.id} 
-            position={projectPositions[index]}
-            onClick={() => {
-              selectProject(project.id);
-              playHit();
-            }}
-            onPointerOver={() => setHovered(project.id)}
-            onPointerOut={() => setHovered(null)}
-          >
-            {/* Project sphere */}
-            <mesh>
-              <sphereGeometry args={[sphereSize, isMobile ? 12 : 16, isMobile ? 12 : 16]} />
-              <meshStandardMaterial 
-                color={project.type === "video" ? "#f04a4a" : 
-                       project.type === "model" ? "#4af04a" : 
-                       project.type === "audio" ? "#f0e54a" : 
-                       "#4a9df0"}
-                roughness={0.3}
-                metalness={0.8}
-                map={project.type === "video" ? woodTexture : 
-                     project.type === "model" ? grassTexture : 
-                     project.type === "audio" ? sandTexture : 
-                     skyTexture}
-              />
-            </mesh>
-            
-            {/* Text label - larger on mobile for better visibility */}
-            <Text
-              position={[0, labelYOffset, 0]}
-              fontSize={fontSize}
-              color="white"
-              anchorX="center"
-              anchorY="middle"
-              outlineWidth={0.02}
-              outlineColor="#000000"
-              maxWidth={isMobile ? 3 : 2}
+        {/* Project nodes */}
+        {projects.map((project, index) => {
+          // Adjust sizes for mobile
+          const sphereSize = isMobile ? 0.8 : 0.6;
+          const fontSize = isMobile ? 0.4 : 0.3;
+          const labelYOffset = isMobile ? 1.2 : 1.0;
+          
+          return (
+            <group 
+              key={project.id} 
+              position={projectPositions[index]}
+              onClick={() => {
+                selectProject(project.id);
+                playHit();
+              }}
+              onPointerOver={() => setHovered(project.id)}
+              onPointerOut={() => setHovered(null)}
             >
-              {project.title}
-            </Text>
-            
-            {/* Show details on hover or selection - simplified for mobile */}
-            {(hovered === project.id || selectedProject?.id === project.id) && (
-              <Html
-                position={[0, -1.2, 0]}
-                center
-                distanceFactor={isMobile ? 10 : 15}
-                occlude
-              >
-                <div className={`bg-black/80 p-2 rounded text-white border border-cyan-500 ${isMobile ? 'text-sm w-48' : 'text-xs w-40'}`}>
-                  <p className="font-bold">{project.title}</p>
-                  <p className="opacity-80">{project.type}</p>
-                  <p className="text-cyan-300 mt-1 text-[10px]">Last updated: {new Date(project.updatedAt).toLocaleDateString()}</p>
-                </div>
-              </Html>
-            )}
-          </group>
-        );
-      })}
-      
-      {/* Connection lines between related projects */}
-      {projectConnections.map((connection, index) => {
-        // Create a properly formatted array for THREE.js
-        const positions = new Float32Array([
-          connection.start.x, connection.start.y, connection.start.z,
-          connection.end.x, connection.end.y, connection.end.z
-        ]);
-        
-        // Create a buffer geometry directly with the positions
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        
-        return (
-          <primitive 
-            key={`connection-${index}`}
-            object={new THREE.Line(
-              geometry,
-              new THREE.LineBasicMaterial({ 
-                color: connection.color, 
-                opacity: 0.6,
-                transparent: true 
-              })
-            )}
-          />
-        );
-      })}
-      
-      {/* Fusion connections - render these before nodes */}
-      {fusionConnections.map((connection, index) => {
-        // Create a properly formatted array for THREE.js
-        const positions = new Float32Array([
-          connection.start.x, connection.start.y, connection.start.z,
-          connection.end.x, connection.end.y, connection.end.z
-        ]);
-        
-        // Create a buffer geometry directly with the positions
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        
-        return (
-          <primitive 
-            key={`fusion-connection-${index}`}
-            object={new THREE.Line(
-              geometry,
-              new THREE.LineBasicMaterial({ 
-                color: connection.color, 
-                opacity: 0.7,
-                transparent: true,
-                linewidth: 1.5 // Slightly thicker than regular connections
-              })
-            )}
-          />
-        );
-      })}
-      
-      {/* Fusion nodes from Reality Fusion */}
-      {fusionNodesWithPositions.map((node: typeof fusionNodesWithPositions[0], index: number) => {
-        // Use the calculated position
-        const position = node.calculatedPosition;
-        const isSelected = selectedNodeId === node.id;
-        const isHovered = hovered === node.id;
-        
-        // Sizing for fusion nodes - larger than regular project nodes
-        const sphereSize = isMobile ? 1.0 : 0.8;
-        const fontSize = isMobile ? 0.5 : 0.4;
-        const labelYOffset = isMobile ? 1.4 : 1.2;
-        
-        // Calculate compatibility and get metadata
-        const compatibility = node.metadata?.compatibility || 75;
-        const sourceCount = node.metadata?.sourceDataIds ? (node.metadata.sourceDataIds as string[]).length : 0;
-        const isOptimized = node.metadata?.optimized || false;
-        
-        return (
-          <group 
-            key={node.id} 
-            position={[position.x, position.y, position.z]}
-            onClick={() => {
-              selectNode(node.id);
-              playHit();
-            }}
-            onPointerOver={() => setHovered(node.id)}
-            onPointerOut={() => setHovered(null)}
-          >
-            {/* Selection glow effect */}
-            {isSelected && (
+              {/* Project sphere */}
               <mesh>
-                <sphereGeometry args={[sphereSize * 1.5, 16, 16]} />
-                <meshBasicMaterial 
-                  color="#9333ea"
-                  transparent={true}
-                  opacity={0.15}
+                <sphereGeometry args={[sphereSize, isMobile ? 12 : 16, isMobile ? 12 : 16]} />
+                <meshStandardMaterial 
+                  color={project.type === "video" ? "#f04a4a" : 
+                         project.type === "model" ? "#4af04a" : 
+                         project.type === "audio" ? "#f0e54a" : 
+                         "#4a9df0"}
+                  roughness={0.3}
+                  metalness={0.8}
+                  map={project.type === "video" ? woodTexture : 
+                       project.type === "model" ? grassTexture : 
+                       project.type === "audio" ? sandTexture : 
+                       skyTexture}
                 />
               </mesh>
-            )}
-            
-            {/* Particle effects for selected/hovered nodes */}
-            {(isSelected || isHovered) && (
-              <>
-                <pointLight 
-                  position={[0, 0, 0]} 
-                  color="#9333ea" 
-                  intensity={2} 
-                  distance={3}
-                />
-                <mesh position={[
-                  Math.sin(Date.now() * 0.001) * sphereSize * 1.7,
-                  Math.cos(Date.now() * 0.001) * sphereSize * 1.7,
-                  Math.sin(Date.now() * 0.002) * sphereSize * 1.7
-                ]}>
-                  <sphereGeometry args={[0.15, 8, 8]} />
-                  <meshBasicMaterial color="#d8b4fe" />
-                </mesh>
-                <mesh position={[
-                  Math.sin(Date.now() * 0.001 + Math.PI) * sphereSize * 1.7,
-                  Math.cos(Date.now() * 0.001 + Math.PI) * sphereSize * 1.7,
-                  Math.sin(Date.now() * 0.002 + Math.PI) * sphereSize * 1.7
-                ]}>
-                  <sphereGeometry args={[0.15, 8, 8]} />
-                  <meshBasicMaterial color="#d8b4fe" />
-                </mesh>
-              </>
-            )}
-            
-            {/* Main fusion node geometry */}
-            <mesh>
-              <dodecahedronGeometry args={[sphereSize, isMobile ? 0 : 1]} />
-              <meshStandardMaterial 
-                color={node.color || "#7c3aed"} // Purple default for fusion nodes
-                emissive={node.color || "#7c3aed"}
-                emissiveIntensity={isSelected ? 0.6 : 0.3}
-                roughness={0.2}
-                metalness={0.9}
-              />
-            </mesh>
-            
-            {/* Source data count rings */}
-            {sourceCount > 0 && (
-              <mesh rotation={[Math.PI/2, 0, 0]}>
-                <torusGeometry args={[sphereSize * 1.2, 0.05, 16, 32]} />
-                <meshBasicMaterial 
-                  color="#a855f7" 
-                  transparent={true}
-                  opacity={0.7}
-                />
-              </mesh>
-            )}
-            
-            {/* Optimization status indicator */}
-            {isOptimized && (
-              <mesh position={[0, sphereSize * 1.2, 0]}>
-                <sphereGeometry args={[0.2, 8, 8]} />
-                <meshBasicMaterial color="#22c55e" />
-              </mesh>
-            )}
-            
-            {/* Fusion node label */}
-            <Text
-              position={[0, labelYOffset, 0]}
-              fontSize={fontSize}
-              color={isSelected ? "#f5f3ff" : "white"}
-              anchorX="center"
-              anchorY="middle"
-              outlineWidth={0.02}
-              outlineColor="#000000"
-              maxWidth={isMobile ? 3 : 2}
-            >
-              {node.name}
-            </Text>
-            
-            {/* Show fusion details on hover or selection */}
-            {(isHovered || isSelected) && (
-              <Html
-                position={[0, -1.2, 0]}
-                center
-                distanceFactor={isMobile ? 10 : 15}
-                occlude
+              
+              {/* Text label - larger on mobile for better visibility */}
+              <Text
+                position={[0, labelYOffset, 0]}
+                fontSize={fontSize}
+                color="white"
+                anchorX="center"
+                anchorY="middle"
+                outlineWidth={0.02}
+                outlineColor="#000000"
+                maxWidth={isMobile ? 3 : 2}
               >
-                <div className={`bg-black/80 p-2 rounded text-white border ${isSelected ? 'border-violet-400' : 'border-purple-500'} ${isMobile ? 'text-sm w-56' : 'text-xs w-48'}`}>
-                  <p className="font-bold">{node.name}</p>
-                  <p className="opacity-80">Reality Fusion</p>
-                  <div className="flex justify-between text-[10px] mt-1">
-                    <span className="text-purple-300">Compatibility: {compatibility}%</span>
-                    <span className="text-blue-300">Sources: {sourceCount}</span>
+                {project.title}
+              </Text>
+              
+              {/* Show details on hover or selection - simplified for mobile */}
+              {(hovered === project.id || selectedProject?.id === project.id) && (
+                <Html
+                  position={[0, -1.2, 0]}
+                  center
+                  distanceFactor={isMobile ? 10 : 15}
+                  occlude
+                >
+                  <div className={`bg-black/80 p-2 rounded text-white border border-cyan-500 ${isMobile ? 'text-sm w-48' : 'text-xs w-40'}`}>
+                    <p className="font-bold">{project.title}</p>
+                    <p className="opacity-80">{project.type}</p>
+                    <p className="text-cyan-300 mt-1 text-[10px]">Last updated: {new Date(project.updatedAt).toLocaleDateString()}</p>
                   </div>
-                  <p className="text-purple-300 mt-1 text-[10px]">Created: {new Date(node.dateCreated).toLocaleDateString()}</p>
-                  {isOptimized && (
-                    <p className="text-green-300 text-[10px]">Optimized ✓</p>
-                  )}
-                  {isSelected && (
-                    <p className="text-green-300 text-[10px] mt-1">
-                      <span className="animate-pulse">▶</span> Inspect in sidebar
-                    </p>
-                  )}
-                </div>
-              </Html>
-            )}
-          </group>
-        );
-      })}
-      
-      {/* AI Personas floating in the universe */}
-      {aiPersonas.map((persona, index) => {
-        // Position personas in a ring around the center - adjust for mobile
-        const angle = (index / aiPersonas.length) * Math.PI * 2;
-        const radius = isMobile ? 6 : 8; // Smaller radius on mobile
-        const x = Math.cos(angle) * radius;
-        const z = Math.sin(angle) * radius;
-        const y = 3 + Math.sin(angle * 2) * 0.5; // Slight vertical variation
+                </Html>
+              )}
+            </group>
+          );
+        })}
         
-        // Increase size on mobile for better visibility
-        const shapeSize = isMobile ? 1.0 : 0.8;
-        const textSize = isMobile ? 0.5 : 0.4;
+        {/* Connection lines between related projects */}
+        {projectConnections.map((connection, index) => {
+          // Create a properly formatted array for THREE.js
+          const positions = new Float32Array([
+            connection.start.x, connection.start.y, connection.start.z,
+            connection.end.x, connection.end.y, connection.end.z
+          ]);
+          
+          // Create a buffer geometry directly with the positions
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+          
+          return (
+            <primitive 
+              key={`connection-${index}`}
+              object={new THREE.Line(
+                geometry,
+                new THREE.LineBasicMaterial({ 
+                  color: connection.color, 
+                  opacity: 0.6,
+                  transparent: true 
+                })
+              )}
+            />
+          );
+        })}
         
-        return (
-          <group key={persona.id} position={[x, y, z]}>
-            <mesh>
-              <octahedronGeometry args={[shapeSize, 0]} />
-              <meshStandardMaterial 
-                color={persona.color} 
-                emissive={persona.color}
-                emissiveIntensity={0.5}
-              />
-            </mesh>
-            <Text
-              position={[0, 1.3, 0]}
-              fontSize={textSize}
-              color="white"
-              anchorX="center"
-              anchorY="middle"
-              outlineWidth={0.02}
-              outlineColor="#000000"
-              maxWidth={isMobile ? 3 : 2}
+        {/* Fusion connections - render these before nodes */}
+        {fusionConnections.map((connection, index) => {
+          // Create a properly formatted array for THREE.js
+          const positions = new Float32Array([
+            connection.start.x, connection.start.y, connection.start.z,
+            connection.end.x, connection.end.y, connection.end.z
+          ]);
+          
+          // Create a buffer geometry directly with the positions
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+          
+          return (
+            <primitive 
+              key={`fusion-connection-${index}`}
+              object={new THREE.Line(
+                geometry,
+                new THREE.LineBasicMaterial({ 
+                  color: connection.color, 
+                  opacity: 0.7,
+                  transparent: true,
+                  linewidth: 1.5 // Slightly thicker than regular connections
+                })
+              )}
+            />
+          );
+        })}
+        
+        {/* Fusion nodes from Reality Fusion */}
+        {fusionNodesWithPositions.map((node, index) => {
+          // Use the calculated position
+          const position = node.calculatedPosition;
+          const isSelected = selectedNodeId === node.id;
+          const isHovered = hovered === node.id;
+          
+          // Sizing for fusion nodes - larger than regular project nodes
+          const sphereSize = isMobile ? 1.0 : 0.8;
+          const fontSize = isMobile ? 0.5 : 0.4;
+          const labelYOffset = isMobile ? 1.4 : 1.2;
+          
+          // Calculate compatibility and get metadata
+          const compatibility = node.metadata?.compatibility || 75;
+          const sourceCount = node.metadata?.sourceDataIds ? (node.metadata.sourceDataIds as string[]).length : 0;
+          const isOptimized = node.metadata?.optimized || false;
+          
+          return (
+            <group 
+              key={node.id} 
+              position={[position.x, position.y, position.z]}
+              onClick={() => {
+                selectNode(node.id);
+                playHit();
+              }}
+              onPointerOver={() => setHovered(node.id)}
+              onPointerOut={() => setHovered(null)}
             >
-              {persona.name}
-            </Text>
-            
-            {/* Touch hint for mobile users */}
-            {isMobile && (
-              <Html
-                position={[0, -1, 0]}
-                center
-                distanceFactor={10}
-                occlude
+              {/* Selection glow effect */}
+              {isSelected && (
+                <mesh>
+                  <sphereGeometry args={[sphereSize * 1.5, 16, 16]} />
+                  <meshBasicMaterial 
+                    color="#9333ea"
+                    transparent={true}
+                    opacity={0.15}
+                  />
+                </mesh>
+              )}
+              
+              {/* Fusion node sphere */}
+              <mesh>
+                <sphereGeometry args={[sphereSize, 16, 16]} />
+                <meshStandardMaterial
+                  color="#9333ea"
+                  emissive="#6d28d9"
+                  emissiveIntensity={isSelected || isHovered ? 1.0 : 0.5}
+                  metalness={0.8}
+                  roughness={0.2}
+                />
+              </mesh>
+              
+              {/* Node label */}
+              <Text
+                position={[0, labelYOffset, 0]}
+                fontSize={fontSize}
+                color="white"
+                anchorX="center"
+                anchorY="middle"
+                outlineWidth={0.02}
+                outlineColor="#000000"
               >
-                <div className="bg-black/60 px-2 py-1 rounded text-white border border-cyan-500 text-[10px]">
-                  <p className="text-center">Tap to select</p>
-                </div>
-              </Html>
-            )}
-          </group>
-        );
-      })}
-    </group>
+                {node.name}
+              </Text>
+              
+              {/* Compatibility indicator ring */}
+              <mesh position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
+                <ringGeometry args={[sphereSize + 0.1, sphereSize + 0.2, 32]} />
+                <meshBasicMaterial 
+                  color={
+                    compatibility > 80 ? "#4ade80" : // Green for high compatibility
+                    compatibility > 60 ? "#facc15" : // Yellow for medium
+                    "#f87171"                        // Red for low
+                  }
+                  transparent 
+                  opacity={isSelected || isHovered ? 0.8 : 0.4} 
+                />
+              </mesh>
+              
+              {/* Show fusion details on hover or selection */}
+              {(isHovered || isSelected) && (
+                <Html
+                  position={[0, -1.5, 0]}
+                  center
+                  distanceFactor={isMobile ? 10 : 15}
+                  occlude
+                >
+                  <div className="bg-black/80 p-2 rounded text-white border border-purple-500 max-w-xs">
+                    <p className="font-bold text-purple-300">{node.name}</p>
+                    <div className="flex items-center mt-1">
+                      <span className="text-xs mr-2">Compatibility:</span>
+                      <div className="w-20 h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full ${
+                            compatibility > 80 ? "bg-green-500" : 
+                            compatibility > 60 ? "bg-yellow-500" : 
+                            "bg-red-500"
+                          }`}
+                          style={{ width: `${compatibility}%` }}
+                        />
+                      </div>
+                      <span className="text-xs ml-1">{compatibility}%</span>
+                    </div>
+                    <p className="text-xs mt-1">Sources: {sourceCount}</p>
+                    {isOptimized && <p className="text-xs text-green-400 mt-1">✓ Optimized</p>}
+                  </div>
+                </Html>
+              )}
+            </group>
+          );
+        })}
+      </group>
+    </>
   );
 };
 
