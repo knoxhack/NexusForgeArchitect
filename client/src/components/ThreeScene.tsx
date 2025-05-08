@@ -50,6 +50,33 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
     };
     
     const handleTouchMove = (e: TouchEvent) => {
+      // Handle pinch zoom (2 touches)
+      if (e.touches.length === 2) {
+        // Calculate the distance between two touch points
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const distance = Math.hypot(
+          touch1.clientX - touch2.clientX,
+          touch1.clientY - touch2.clientY
+        );
+        
+        // Store the distance for next pinch zoom calculation
+        const prevDistance = (window as any).prevPinchDistance || distance;
+        (window as any).prevPinchDistance = distance;
+        
+        // Calculate zoom direction and apply zoom
+        const zoomDirection = distance > prevDistance ? 1 : -1;
+        const zoomSpeed = 0.5;
+        
+        // Zoom in or out
+        const direction = new THREE.Vector3()
+          .subVectors(targetLookAt, targetPosition)
+          .normalize();
+        targetPosition.addScaledVector(direction, zoomSpeed * zoomDirection);
+        return;
+      }
+      
+      // Handle normal touch movement (1 touch)
       if (!touchStartPos || e.touches.length !== 1) return;
       
       const touch = e.touches[0];
@@ -77,44 +104,13 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
     
     const handleTouchEnd = () => {
       setTouchStartPos(null);
-    };
-    
-    const handlePinchZoom = (e: TouchEvent) => {
-      if (e.touches.length !== 2) return;
-      
-      // Calculate the distance between two touch points
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-      const distance = Math.hypot(
-        touch1.clientX - touch2.clientX,
-        touch1.clientY - touch2.clientY
-      );
-      
-      // Store the distance for next pinch zoom calculation
-      const prevDistance = (window as any).prevPinchDistance || distance;
-      (window as any).prevPinchDistance = distance;
-      
-      // Calculate zoom direction and apply zoom
-      const zoomDirection = distance > prevDistance ? 1 : -1;
-      const zoomSpeed = 0.5;
-      
-      // Zoom in or out
-      const direction = new THREE.Vector3()
-        .subVectors(targetLookAt, targetPosition)
-        .normalize();
-      targetPosition.addScaledVector(direction, zoomSpeed * zoomDirection);
+      // Reset pinch distance when touch ends
+      (window as any).prevPinchDistance = null;
     };
     
     // Add event listeners to window
     window.addEventListener('touchstart', handleTouchStart);
-    window.addEventListener('touchmove', (e) => {
-      // Check if it's a pinch gesture (2 touches)
-      if (e.touches.length === 2) {
-        handlePinchZoom(e);
-      } else {
-        handleTouchMove(e);
-      }
-    });
+    window.addEventListener('touchmove', handleTouchMove);
     window.addEventListener('touchend', handleTouchEnd);
     window.addEventListener('touchcancel', handleTouchEnd);
     
