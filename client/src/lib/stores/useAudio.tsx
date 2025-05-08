@@ -1,14 +1,32 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+export type SoundCategory = 'background' | 'ui' | 'effects' | 'notification';
+
+export interface SoundEffect {
+  audio: HTMLAudioElement;
+  category: SoundCategory;
+  volume: number; // Individual volume multiplier
+  loop: boolean;
+  name: string;
+}
+
 interface AudioState {
+  // Audio elements
   backgroundMusic: HTMLAudioElement | null;
   hitSound: HTMLAudioElement | null;
   successSound: HTMLAudioElement | null;
   errorSound: HTMLAudioElement | null;
   notificationSound: HTMLAudioElement | null;
+  
+  // Sound library
+  soundEffects: Record<string, SoundEffect>;
+  currentAmbient: string | null;
+  
+  // Control state
   isMuted: boolean;
   volume: number; // Master volume from 0 to 1
+  categoryVolumes: Record<SoundCategory, number>; // Per-category volume
   
   // Setter functions
   setBackgroundMusic: (music: HTMLAudioElement) => void;
@@ -17,9 +35,25 @@ interface AudioState {
   setErrorSound: (sound: HTMLAudioElement) => void;
   setNotificationSound: (sound: HTMLAudioElement) => void;
   
-  // Control functions
+  // Sound library functions
+  addSound: (id: string, sound: HTMLAudioElement, options: {
+    category: SoundCategory;
+    volume?: number;
+    loop?: boolean;
+    name?: string;
+  }) => void;
+  playSound: (id: string) => void;
+  stopSound: (id: string) => void;
+  
+  // Ambient sound control
+  setAmbient: (id: string | null) => void;
+  
+  // Volume control functions
   toggleMute: () => void;
   setVolume: (volume: number) => void;
+  setCategoryVolume: (category: SoundCategory, volume: number) => void;
+  
+  // Convenience functions for common sounds
   playHit: () => void;
   playSuccess: () => void;
   playError: () => void;
@@ -36,8 +70,16 @@ export const useAudio = create<AudioState>()(
       successSound: null,
       errorSound: null,
       notificationSound: null,
+      soundEffects: {},
+      currentAmbient: null,
       isMuted: true, // Start muted by default
       volume: 0.7, // Default volume
+      categoryVolumes: {
+        background: 0.5,
+        ui: 0.8,
+        effects: 0.9,
+        notification: 0.7
+      },
       
       // Setter functions
       setBackgroundMusic: (music) => {
@@ -160,13 +202,124 @@ export const useAudio = create<AudioState>()(
         } else if (isMuted) {
           console.log("Notification sound skipped (muted)");
         }
+      },
+
+      // Sound library functions
+      addSound: (id, sound, options) => {
+        const { category = 'effects', volume = 1, loop = false, name = id } = options;
+        
+        // Configure the sound
+        sound.loop = loop;
+        
+        // Create the sound effect entry
+        const soundEffect: SoundEffect = {
+          audio: sound,
+          category,
+          volume,
+          loop,
+          name
+        };
+        
+        // Add to the library
+        set((state) => ({
+          soundEffects: { ...state.soundEffects, [id]: soundEffect }
+        }));
+        
+        console.log(`Sound '${name}' added to library as '${id}'`);
+        return id;
+      },
+      
+      playSound: (id) => {
+        const { soundEffects, isMuted, volume, categoryVolumes } = get();
+        
+        // Check if the sound exists and if audio is not muted
+        if (soundEffects[id] && !isMuted) {
+          const effect = soundEffects[id];
+          
+          // Calculate proper volume using master, category and sound-specific volume
+          const categoryVolume = categoryVolumes[effect.category];
+          const effectiveVolume = volume * categoryVolume * effect.volume;
+          
+          // Create a clone for non-looped sounds to allow overlapping playback
+          let soundToPlay = effect.audio;
+          if (!effect.loop) {
+            soundToPlay = effect.audio.cloneNode() as HTMLAudioElement;
+          }
+          
+          // Set volume and play
+          soundToPlay.volume = effectiveVolume;
+          soundToPlay.play().catch(error => {
+            console.log(`Sound '${effect.name}' play prevented:`, error);
+          });
+          
+          console.log(`Playing sound: ${effect.name} (${id})`);
+        } else if (isMuted) {
+          console.log(`Sound '${id}' skipped (muted)`);
+        } else {
+          console.log(`Sound '${id}' not found in library`);
+        }
+      },
+      
+      stopSound: (id) => {
+        const { soundEffects } = get();
+        
+        if (soundEffects[id]) {
+          soundEffects[id].audio.pause();
+          soundEffects[id].audio.currentTime = 0;
+          console.log(`Sound '${soundEffects[id].name}' stopped`);
+        } else {
+          console.log(`Sound '${id}' not found in library to stop`);
+        }
+      },
+      
+      setAmbient: (id) => {
+        const { soundEffects, currentAmbient } = get();
+        
+        // Stop the current ambient sound if there is one
+        if (currentAmbient && soundEffects[currentAmbient]) {
+          get().stopSound(currentAmbient);
+        }
+        
+        // Set the new ambient sound
+        if (id && soundEffects[id]) {
+          set({ currentAmbient: id });
+          get().playSound(id);
+          console.log(`Ambient sound set to '${soundEffects[id].name}'`);
+        } else if (id) {
+          console.log(`Ambient sound '${id}' not found in library`);
+        } else {
+          set({ currentAmbient: null });
+          console.log('Ambient sound cleared');
+        }
+      },
+      
+      setCategoryVolume: (category, newVolume) => {
+        const { isMuted, soundEffects, currentAmbient } = get();
+        const clampedVolume = Math.max(0, Math.min(1, newVolume));
+        
+        // Update the category volume
+        set(state => ({
+          categoryVolumes: {
+            ...state.categoryVolumes,
+            [category]: clampedVolume
+          }
+        }));
+        
+        // Update any currently playing sounds in this category
+        if (!isMuted && category === 'background' && currentAmbient) {
+          get().playSound(currentAmbient);
+        }
+        
+        console.log(`${category} volume set to ${(clampedVolume * 100).toFixed(0)}%`);
       }
     }),
     {
       name: 'nexusforge-audio-storage',
       partialize: (state) => ({ 
         isMuted: state.isMuted, 
-        volume: state.volume 
+        volume: state.volume,
+        categoryVolumes: state.categoryVolumes,
+        currentAmbient: state.currentAmbient
       }),
     }
   )
