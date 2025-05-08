@@ -1,4 +1,4 @@
-import { Suspense, useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect, lazy } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Loader, KeyboardControls } from "@react-three/drei";
 import { Toaster } from "sonner";
@@ -22,6 +22,9 @@ import { useGame } from "./lib/stores/useGame";
 import { useIsMobile } from "./hooks/use-is-mobile";
 import { useNotifications } from "./lib/stores/useNotifications";
 import "@fontsource/inter";
+
+// Dynamically import GlobalSearch to prevent circular dependencies if there are any
+const GlobalSearch = lazy(() => import("./components/GlobalSearch"));
 
 // Define view types
 type ViewType = "universe" | "timeline" | "assistant" | "stats";
@@ -237,6 +240,11 @@ function App() {
                 
                 {/* System Status */}
                 <SystemStatus />
+                
+                {/* Global Search */}
+                <Suspense fallback={<div>Loading search...</div>}>
+                  <GlobalSearch />
+                </Suspense>
               </div>
             }
           />
