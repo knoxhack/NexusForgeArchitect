@@ -366,14 +366,6 @@ export const useGame = create<GameState>()(
         // Get current state directly (not in a set call)
         const state = get();
         return state.universeNodes.filter(node => node.type === "fusion");
-      },
-      
-      // Reset tutorial state to allow users to see tutorial again
-      resetTutorial: () => {
-        set({
-          tutorialCompleted: false,
-          lastInteraction: Date.now()
-        });
       }
     })),
     {
