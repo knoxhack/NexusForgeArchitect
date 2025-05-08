@@ -81,30 +81,95 @@ const TouchControls: React.FC<TouchControlsProps> = ({ targetPosition, targetLoo
     targetPosition.addScaledVector(direction, zoomSpeed * zoomDirection);
   };
   
-  return (
-    <div
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        touchAction: "none",
-        zIndex: 1,
-      }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-    >
-      {/* Visual indicators for touch controls */}
-      <div className="touch-controls-hint">
-        <div className="absolute bottom-4 left-0 right-0 text-center text-white/70 text-sm bg-black/30 py-1">
-          Drag to navigate • Pinch to zoom
-        </div>
-      </div>
-    </div>
-  );
+  // In Three.js/R3F context, we can't use regular HTML div elements directly
+  // Let's use a group or another Three.js object that will handle the touch events
+  
+  // Create a transparent plane that covers the entire view to capture touch events
+  React.useEffect(() => {
+    // Add global touch event listeners to the window
+    const handleTouchStartGlobal = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        setTouchStartPos({
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+        });
+      }
+    };
+    
+    const handleTouchMoveGlobal = (e: TouchEvent) => {
+      if (!touchStartPos || e.touches.length !== 1) return;
+      
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - touchStartPos.x;
+      const deltaY = touch.clientY - touchStartPos.y;
+      
+      // Update touch start position
+      setTouchStartPos({
+        x: touch.clientX,
+        y: touch.clientY,
+      });
+      
+      // Movement speed factor
+      const speed = 0.05;
+      
+      // Move based on touch deltas
+      // Horizontal movement (left/right)
+      targetPosition.x -= deltaX * speed;
+      targetLookAt.x -= deltaX * speed;
+      
+      // Vertical movement (forward/backward)
+      targetPosition.z += deltaY * speed;
+      targetLookAt.z += deltaY * speed;
+    };
+    
+    const handleTouchEndGlobal = () => {
+      setTouchStartPos(null);
+    };
+    
+    const handlePinchZoomGlobal = (e: TouchEvent) => {
+      if (e.touches.length !== 2) return;
+      
+      // Calculate the distance between two touch points
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(
+        touch1.clientX - touch2.clientX,
+        touch1.clientY - touch2.clientY
+      );
+      
+      // Store the distance for next pinch zoom calculation
+      const prevDistance = (window as any).prevPinchDistance || distance;
+      (window as any).prevPinchDistance = distance;
+      
+      // Calculate zoom direction and apply zoom
+      const zoomDirection = distance > prevDistance ? 1 : -1;
+      const zoomSpeed = 0.5;
+      
+      // Zoom in or out
+      const direction = new THREE.Vector3()
+        .subVectors(targetLookAt, targetPosition)
+        .normalize();
+      targetPosition.addScaledVector(direction, zoomSpeed * zoomDirection);
+    };
+    
+    // Add event listeners to the window
+    window.addEventListener('touchstart', handleTouchStartGlobal);
+    window.addEventListener('touchmove', handleTouchMoveGlobal);
+    window.addEventListener('touchend', handleTouchEndGlobal);
+    window.addEventListener('touchcancel', handleTouchEndGlobal);
+    
+    // Clean up event listeners on unmount
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStartGlobal);
+      window.removeEventListener('touchmove', handleTouchMoveGlobal);
+      window.removeEventListener('touchend', handleTouchEndGlobal);
+      window.removeEventListener('touchcancel', handleTouchEndGlobal);
+    };
+  }, [targetPosition, targetLookAt, touchStartPos]);
+  
+  // Return null since we're handling touch events at the window level
+  // and not rendering any 3D objects
+  return null;
 };
 
 export default TouchControls;

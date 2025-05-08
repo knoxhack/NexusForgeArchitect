@@ -11,7 +11,6 @@ import * as THREE from "three";
 import Universe from "./Universe";
 import { useGame } from "@/lib/stores/useGame";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import TouchControls from "./TouchControls";
 
 interface ThreeSceneProps {
   activeView: string;
@@ -32,6 +31,101 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
   const rightward = useKeyboardControls((state) => state.rightward);
   const zoom = useKeyboardControls((state) => state.zoom);
   const unzoom = useKeyboardControls((state) => state.unzoom);
+  
+  // Handle touch controls for mobile
+  const [touchStartPos, setTouchStartPos] = useState<{ x: number; y: number } | null>(null);
+  
+  // Add touch event listeners
+  useEffect(() => {
+    if (!isMobile) return;
+    
+    // Touch event handlers
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        setTouchStartPos({
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+        });
+      }
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!touchStartPos || e.touches.length !== 1) return;
+      
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - touchStartPos.x;
+      const deltaY = touch.clientY - touchStartPos.y;
+      
+      // Update touch start position
+      setTouchStartPos({
+        x: touch.clientX,
+        y: touch.clientY,
+      });
+      
+      // Movement speed factor
+      const speed = 0.05;
+      
+      // Move based on touch deltas
+      // Horizontal movement (left/right)
+      targetPosition.x -= deltaX * speed;
+      targetLookAt.x -= deltaX * speed;
+      
+      // Vertical movement (forward/backward)
+      targetPosition.z += deltaY * speed;
+      targetLookAt.z += deltaY * speed;
+    };
+    
+    const handleTouchEnd = () => {
+      setTouchStartPos(null);
+    };
+    
+    const handlePinchZoom = (e: TouchEvent) => {
+      if (e.touches.length !== 2) return;
+      
+      // Calculate the distance between two touch points
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(
+        touch1.clientX - touch2.clientX,
+        touch1.clientY - touch2.clientY
+      );
+      
+      // Store the distance for next pinch zoom calculation
+      const prevDistance = (window as any).prevPinchDistance || distance;
+      (window as any).prevPinchDistance = distance;
+      
+      // Calculate zoom direction and apply zoom
+      const zoomDirection = distance > prevDistance ? 1 : -1;
+      const zoomSpeed = 0.5;
+      
+      // Zoom in or out
+      const direction = new THREE.Vector3()
+        .subVectors(targetLookAt, targetPosition)
+        .normalize();
+      targetPosition.addScaledVector(direction, zoomSpeed * zoomDirection);
+    };
+    
+    // Add event listeners to window
+    window.addEventListener('touchstart', handleTouchStart);
+    window.addEventListener('touchmove', (e) => {
+      // Check if it's a pinch gesture (2 touches)
+      if (e.touches.length === 2) {
+        handlePinchZoom(e);
+      } else {
+        handleTouchMove(e);
+      }
+    });
+    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchcancel', handleTouchEnd);
+    
+    // Clean up event listeners
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
+    };
+  }, [isMobile, targetPosition, targetLookAt, touchStartPos]);
   
   // Position the camera based on the active view
   useEffect(() => {
@@ -142,14 +236,6 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
       
       {/* Environment lighting for better 3D object appearance */}
       <Environment preset="night" />
-      
-      {/* Add touch controls for mobile */}
-      {isMobile && (
-        <TouchControls 
-          targetPosition={targetPosition} 
-          targetLookAt={targetLookAt} 
-        />
-      )}
     </>
   );
 };

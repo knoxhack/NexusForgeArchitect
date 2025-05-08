@@ -12,6 +12,7 @@ import ProjectManager from "./components/ProjectManager";
 import CreatorStats from "./components/CreatorStats";
 import { useAudio } from "./lib/stores/useAudio";
 import { useGame } from "./lib/stores/useGame";
+import { useIsMobile } from "./hooks/use-is-mobile";
 import "@fontsource/inter";
 
 // Define keyboard control map for navigation
@@ -32,6 +33,7 @@ function App() {
   const [activeView, setActiveView] = useState<string>("universe");
   const [showCanvas, setShowCanvas] = useState(false);
   const { phase } = useGame();
+  const isMobile = useIsMobile();
   
   // Audio setup
   const { setBackgroundMusic, setHitSound, setSuccessSound } = useAudio();
@@ -109,6 +111,15 @@ function App() {
                       </Canvas>
                       
                       <Loader />
+                      
+                      {/* Mobile Touch Controls Hint */}
+                      {isMobile && activeView === "universe" && (
+                        <div className="absolute bottom-16 left-0 right-0 flex justify-center z-50 pointer-events-none">
+                          <div className="bg-black/60 text-white/90 text-xs px-3 py-1 rounded-full">
+                            Drag to navigate • Pinch to zoom
+                          </div>
+                        </div>
+                      )}
                       
                       {/* UI Overlays */}
                       <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
