@@ -11,6 +11,8 @@ import Timeline from "./components/Timeline";
 import ProjectManager from "./components/ProjectManager";
 import CreatorStats from "./components/CreatorStats";
 import GodMode from "./components/GodMode";
+import OnboardingTutorial from "./components/OnboardingTutorial";
+import AccessibilitySettings from "./components/AccessibilitySettings";
 import { useAudio } from "./lib/stores/useAudio";
 import { useGame } from "./lib/stores/useGame";
 import { useIsMobile } from "./hooks/use-is-mobile";
@@ -213,6 +215,12 @@ function App() {
                 
                 {/* God Mode Features */}
                 <GodMode />
+                
+                {/* Onboarding Tutorial */}
+                <OnboardingTutorial />
+                
+                {/* Accessibility Settings */}
+                <AccessibilitySettings />
               </div>
             }
           />
