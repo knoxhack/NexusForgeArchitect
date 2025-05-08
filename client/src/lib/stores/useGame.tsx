@@ -1,23 +1,10 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { persist } from "zustand/middleware";
+import { NodeType, UniverseNode } from "../types/universe";
 
 export type GamePhase = "ready" | "playing" | "ended";
 export type ViewMode = "default" | "godmode" | "focus" | "analytics";
-export type NodeType = "project" | "fusion" | "resource" | "connection";
-
-export interface UniverseNode {
-  id: string;
-  type: NodeType;
-  name: string;
-  position: { x: number; y: number; z: number };
-  scale: number;
-  color: string;
-  connections: string[]; // IDs of connected nodes
-  dateCreated: string;
-  lastModified: string;
-  metadata?: Record<string, any>;
-}
 
 interface GameState {
   phase: GamePhase;
@@ -67,7 +54,7 @@ interface GameState {
 
 export const useGame = create<GameState>()(
   persist(
-    subscribeWithSelector((set) => ({
+    subscribeWithSelector((set, get) => ({
       phase: "ready",
       viewMode: "default",
       lastInteraction: Date.now(),
@@ -375,9 +362,9 @@ export const useGame = create<GameState>()(
         return id;
       },
       
-      getFusionNodes: () => {
+      getFusionNodes: (): UniverseNode[] => {
         // Get current state directly (not in a set call)
-        const state = useGame.getState();
+        const state = get();
         return state.universeNodes.filter(node => node.type === "fusion");
       }
     })),
