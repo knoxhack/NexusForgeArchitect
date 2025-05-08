@@ -26,7 +26,7 @@ export const UniverseSidebar: React.FC<UniverseSidebarProps> = ({ className = ""
   // Handle closing the sidebar
   const handleClose = () => {
     if (selectedNodeId) {
-      selectNode(null);
+      selectNode("");
     }
     if (selectedProject) {
       selectProject(null);

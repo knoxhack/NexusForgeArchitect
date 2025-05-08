@@ -45,6 +45,9 @@ interface RealityFusionState {
   deselectItem: (id: string) => void;
   clearSelection: () => void;
   addRecentFusion: (id: string) => void;
+  
+  // Getters
+  getRealityDataById: (id: string) => RealityData | undefined;
 }
 
 // Initial sample data
@@ -193,7 +196,13 @@ export const useRealityFusion = create<RealityFusionState>()(
         return {
           recentFusions: newRecentFusions
         };
-      })
+      }),
+      
+      // Get reality data by ID
+      getRealityDataById: (id) => {
+        const { realityData } = get();
+        return realityData.find(item => item.id === id);
+      }
     }),
     {
       name: 'nexusforge-reality-fusion',

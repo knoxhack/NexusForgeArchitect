@@ -17,9 +17,9 @@ interface FusionNodeInspectorProps {
 
 export const FusionNodeInspector = ({ nodeId, onClose }: FusionNodeInspectorProps) => {
   const { universeNodes, updateNode } = useGame();
-  const { allRealityData } = useRealityFusion();
+  const { realityData, getRealityDataById } = useRealityFusion();
   const { projects } = useProjects();
-  const { playClick, playSuccess } = useAudio();
+  const { playHit: playClick, playSuccess } = useAudio();
   const { addNotification } = useNotifications();
   
   // Find the fusion node
