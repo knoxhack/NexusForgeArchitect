@@ -189,30 +189,31 @@ const Universe: React.FC<UniverseProps> = ({ activeView }) => {
       ))}
       
       {/* Connection lines between related projects */}
-      {projectConnections.map((connection, index) => (
-        <line key={`connection-${index}`}>
-          <bufferGeometry attach="geometry">
-            <float32BufferAttribute 
-              attach="attributes-position" 
-              count={2}
-              array={[
-                connection.start.x, connection.start.y, connection.start.z,
-                connection.end.x, connection.end.y, connection.end.z
-              ]}
-              itemSize={3}
-            />
-          </bufferGeometry>
-          <lineBasicMaterial 
-            attach="material" 
-            color={connection.color} 
-            linewidth={1} 
-            linecap="round" 
-            linejoin="round"
-            opacity={0.6}
-            transparent
+      {projectConnections.map((connection, index) => {
+        // Create a properly formatted array for THREE.js
+        const positions = new Float32Array([
+          connection.start.x, connection.start.y, connection.start.z,
+          connection.end.x, connection.end.y, connection.end.z
+        ]);
+        
+        // Create a buffer geometry directly with the positions
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        
+        return (
+          <primitive 
+            key={`connection-${index}`}
+            object={new THREE.Line(
+              geometry,
+              new THREE.LineBasicMaterial({ 
+                color: connection.color, 
+                opacity: 0.6,
+                transparent: true 
+              })
+            )}
           />
-        </line>
-      ))}
+        );
+      })}
       
       {/* AI Personas floating in the universe */}
       {aiPersonas.map((persona, index) => {
