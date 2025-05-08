@@ -21,6 +21,7 @@ import UserPreferences from "./components/UserPreferences";
 import ShortcutGuide from "./components/ShortcutGuide";
 import SystemStatus from "./components/SystemStatus";
 import RealityFusion from "./components/RealityFusion";
+import { UniverseSidebar } from "./components/UniverseSidebar";
 import { useAudio } from "./lib/stores/useAudio";
 import { useGame } from "./lib/stores/useGame";
 import { useIsMobile } from "./hooks/use-is-mobile";
@@ -261,6 +262,9 @@ function App() {
                 <Suspense fallback={<div>Loading search...</div>}>
                   <GlobalSearch />
                 </Suspense>
+                
+                {/* Universe Sidebar for selected nodes/projects */}
+                {activeView === "universe" && <UniverseSidebar />}
                 
                 {/* Reality Fusion Lab */}
                 <div className="fixed bottom-4 right-4 z-50">
