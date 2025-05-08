@@ -142,8 +142,25 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
     
     // Make hovered projects pulse slightly
     if (hovered !== null && groupRef.current) {
-      const hoveredNode = groupRef.current.children[hovered];
-      if (hoveredNode) {
+      // Find the child index based on hovered ID
+      let hoveredNodeIndex = -1;
+      
+      // Check projects first (offset by 1 for central node)
+      const projectIndex = projects.findIndex(p => p.id === hovered);
+      if (projectIndex !== -1) {
+        hoveredNodeIndex = projectIndex + 1; // +1 for central node
+      }
+      
+      // Check fusion nodes if not found in projects
+      if (hoveredNodeIndex === -1) {
+        const fusionIndex = fusionNodes.findIndex(n => n.id === hovered);
+        if (fusionIndex !== -1) {
+          // Fusion nodes come after projects + central node + connections
+          hoveredNodeIndex = 1 + projects.length + projectConnections.length + fusionIndex;
+        }
+      }
+      
+      if (hoveredNodeIndex !== -1 && groupRef.current.children[hoveredNodeIndex]) {
         // Apply a subtle pulsing animation
         const time = state.clock.getElapsedTime();
         
@@ -152,7 +169,7 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
         const pulseSpeed = viewMode === "godmode" ? 3 : 2;
         const scale = 1 + Math.sin(time * pulseSpeed) * pulseIntensity;
         
-        hoveredNode.scale.set(scale, scale, scale);
+        groupRef.current.children[hoveredNodeIndex].scale.set(scale, scale, scale);
       }
     }
     
@@ -161,14 +178,29 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
       const time = state.clock.getElapsedTime();
       
       // Apply to project nodes (skip the central node)
-      projects.forEach((_, index) => {
-        if (index !== hovered) { // Don't override the hovered animation
+      projects.forEach((project, index) => {
+        if (project.id !== hovered) { // Don't override the hovered animation
           const projectNode = groupRef.current?.children[index + 1]; // +1 because of the central node
           if (projectNode) {
             // Offset the time for each project to create a wave effect
             const offsetTime = time + index * 0.2;
             const baseScale = 1 + Math.sin(offsetTime * 1.5) * 0.03;
             projectNode.scale.set(baseScale, baseScale, baseScale);
+          }
+        }
+      });
+      
+      // Apply to fusion nodes as well
+      fusionNodes.forEach((node, index) => {
+        if (node.id !== hovered) {
+          // Fusion nodes come after projects + central node + connections
+          const nodeIndex = 1 + projects.length + projectConnections.length + index;
+          const fusionNode = groupRef.current?.children[nodeIndex];
+          if (fusionNode) {
+            // Create a different wave pattern for fusion nodes
+            const offsetTime = time + index * 0.3 + Math.PI; // offset by PI for varied effect
+            const baseScale = 1 + Math.sin(offsetTime * 1.2) * 0.04;
+            fusionNode.scale.set(baseScale, baseScale, baseScale);
           }
         }
       });
@@ -243,7 +275,7 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
             </Text>
             
             {/* Show details on hover or selection - simplified for mobile */}
-            {(hovered === index || selectedProject?.id === project.id) && (
+            {(hovered === project.id || selectedProject?.id === project.id) && (
               <Html
                 position={[0, -1.2, 0]}
                 center
@@ -285,6 +317,78 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
               })
             )}
           />
+        );
+      })}
+      
+      {/* Fusion nodes from Reality Fusion */}
+      {fusionNodes.map((node, index) => {
+        // Position fusion nodes in a different layer than projects
+        // Use the node's position if available, or calculate a new one
+        const position = node.position || {
+          // Create a position based on a spiral pattern different from projects
+          x: Math.cos(index * 0.7) * (6 + index * 0.5),
+          y: 4 + Math.sin(index * 0.5) * 1.5, // Higher layer for fusion nodes
+          z: Math.sin(index * 0.7) * (6 + index * 0.5)
+        };
+        
+        // Sizing for fusion nodes - larger than regular project nodes
+        const sphereSize = isMobile ? 1.0 : 0.8;
+        const fontSize = isMobile ? 0.5 : 0.4;
+        const labelYOffset = isMobile ? 1.4 : 1.2;
+        
+        return (
+          <group 
+            key={node.id} 
+            position={[position.x, position.y, position.z]}
+            onClick={() => {
+              selectNode(node.id);
+              playHit();
+            }}
+            onPointerOver={() => setHovered(node.id)}
+            onPointerOut={() => setHovered(null)}
+          >
+            {/* Fusion node sphere */}
+            <mesh>
+              <dodecahedronGeometry args={[sphereSize, isMobile ? 0 : 1]} />
+              <meshStandardMaterial 
+                color={node.color || "#7c3aed"} // Purple default for fusion nodes
+                emissive={node.color || "#7c3aed"}
+                emissiveIntensity={0.3}
+                roughness={0.2}
+                metalness={0.9}
+              />
+            </mesh>
+            
+            {/* Fusion node label */}
+            <Text
+              position={[0, labelYOffset, 0]}
+              fontSize={fontSize}
+              color="white"
+              anchorX="center"
+              anchorY="middle"
+              outlineWidth={0.02}
+              outlineColor="#000000"
+              maxWidth={isMobile ? 3 : 2}
+            >
+              {node.name}
+            </Text>
+            
+            {/* Show fusion details on hover or selection */}
+            {(hovered === node.id || selectedNodeId === node.id) && (
+              <Html
+                position={[0, -1.2, 0]}
+                center
+                distanceFactor={isMobile ? 10 : 15}
+                occlude
+              >
+                <div className={`bg-black/80 p-2 rounded text-white border border-purple-500 ${isMobile ? 'text-sm w-48' : 'text-xs w-40'}`}>
+                  <p className="font-bold">{node.name}</p>
+                  <p className="opacity-80">Reality Fusion</p>
+                  <p className="text-purple-300 mt-1 text-[10px]">Created: {new Date(node.dateCreated).toLocaleDateString()}</p>
+                </div>
+              </Html>
+            )}
+          </group>
         );
       })}
       
