@@ -56,6 +56,10 @@ interface GameState {
   connectNodes: (sourceId: string, targetId: string) => void;
   disconnectNodes: (sourceId: string, targetId: string) => void;
   selectNode: (id: string | null) => void;
+  
+  // Fusion-specific actions
+  createFusionNode: (name: string, sourceDataIds: string[], metadata?: Record<string, any>) => string;
+  getFusionNodes: () => UniverseNode[];
 }
 
 export const useGame = create<GameState>()(
@@ -299,6 +303,71 @@ export const useGame = create<GameState>()(
           lastInteraction: Date.now(),
           interactionCount: state.interactionCount + 1
         }));
+      },
+      
+      // Fusion node specific methods
+      createFusionNode: (name: string, sourceDataIds: string[], metadata?: Record<string, any>) => {
+        // Generate a unique ID for the fusion node
+        const id = `fusion-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const now = new Date().toISOString();
+        
+        // Create default position offset from center - will be adjusted in Universe view
+        // for proper visualization and to avoid overlapping
+        const defaultPosition = {
+          x: (Math.random() - 0.5) * 10,
+          y: 3 + Math.random() * 3,
+          z: (Math.random() - 0.5) * 10
+        };
+        
+        // Create a new fusion node
+        const fusionNode: UniverseNode = {
+          id,
+          type: "fusion",
+          name,
+          position: defaultPosition,
+          scale: 1.2, // Slightly larger than regular nodes
+          color: "#7c3aed", // Purple for fusion nodes
+          connections: [], // Will be populated when connecting to source nodes
+          dateCreated: now,
+          lastModified: now,
+          metadata: {
+            ...metadata,
+            sourceDataIds: sourceDataIds, // Store source data IDs for connections
+          }
+        };
+        
+        set((state) => {
+          // Add the fusion node
+          const newNodes = [...state.universeNodes, fusionNode];
+          
+          // Create connections to all source data nodes
+          const nodesWithConnections = newNodes.map(node => {
+            if (sourceDataIds.includes(node.id)) {
+              // If this is a source node, connect it to the fusion node
+              return {
+                ...node,
+                connections: [...node.connections, id],
+                lastModified: now
+              };
+            }
+            return node;
+          });
+          
+          return {
+            universeNodes: nodesWithConnections,
+            lastInteraction: Date.now(),
+            interactionCount: state.interactionCount + 1
+          };
+        });
+        
+        // Return the ID of the created fusion node
+        return id;
+      },
+      
+      getFusionNodes: () => {
+        // Get current state directly (not in a set call)
+        const state = useGame.getState();
+        return state.universeNodes.filter(node => node.type === "fusion");
       }
     })),
     {

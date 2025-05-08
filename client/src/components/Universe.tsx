@@ -96,10 +96,61 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
     return connections;
   }, [projects, projectPositions]);
   
-  // Add fusion nodes
-  const fusionNodes = useMemo(() => {
-    return universeNodes.filter(node => node.type === "fusion");
+  // Add fusion nodes and calculate fusion node positions
+  const fusionNodesWithPositions = useMemo(() => {
+    return universeNodes
+      .filter(node => node.type === "fusion")
+      .map((node, index) => ({
+        ...node,
+        calculatedPosition: node.position || {
+          // Create a position based on a spiral pattern different from projects
+          x: Math.cos(index * 0.7) * (6 + index * 0.5),
+          y: 4 + Math.sin(index * 0.5) * 1.5, // Higher layer for fusion nodes
+          z: Math.sin(index * 0.7) * (6 + index * 0.5)
+        }
+      }));
   }, [universeNodes]);
+  
+  // Generate connections between fusion nodes and their source data
+  const fusionConnections = useMemo(() => {
+    const connections: {start: THREE.Vector3, end: THREE.Vector3, color: string}[] = [];
+    
+    // Process each fusion node
+    fusionNodesWithPositions.forEach(fusionNode => {
+      // Check if the fusion node has metadata with source data IDs
+      if (fusionNode.metadata?.sourceDataIds) {
+        const sourceIds = fusionNode.metadata.sourceDataIds as string[];
+        const fusionNodePos = fusionNode.calculatedPosition;
+        const fusionStart = new THREE.Vector3(fusionNodePos.x, fusionNodePos.y, fusionNodePos.z);
+        
+        // Connect to related projects
+        sourceIds.forEach(sourceId => {
+          // Try to find this source ID in projects
+          const projectIndex = projects.findIndex(p => p.id === sourceId);
+          if (projectIndex !== -1) {
+            connections.push({
+              start: fusionStart,
+              end: projectPositions[projectIndex],
+              color: "#7c3aed" // Purple connections for fusions
+            });
+          }
+          
+          // Connect to other fusion nodes too
+          const relatedFusionIndex = fusionNodesWithPositions.findIndex(n => n.id === sourceId);
+          if (relatedFusionIndex !== -1) {
+            const relatedPos = fusionNodesWithPositions[relatedFusionIndex].calculatedPosition;
+            connections.push({
+              start: fusionStart,
+              end: new THREE.Vector3(relatedPos.x, relatedPos.y, relatedPos.z),
+              color: "#9333ea" // Darker purple for fusion-to-fusion connections
+            });
+          }
+        });
+      }
+    });
+    
+    return connections;
+  }, [fusionNodesWithPositions, projects, projectPositions]);
   
   // Handle select key press
   const select = useKeyboardControls((state) => state.select);
@@ -153,7 +204,7 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
       
       // Check fusion nodes if not found in projects
       if (hoveredNodeIndex === -1) {
-        const fusionIndex = fusionNodes.findIndex(n => n.id === hovered);
+        const fusionIndex = fusionNodesWithPositions.findIndex(n => n.id === hovered);
         if (fusionIndex !== -1) {
           // Fusion nodes come after projects + central node + connections
           hoveredNodeIndex = 1 + projects.length + projectConnections.length + fusionIndex;
@@ -191,10 +242,10 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
       });
       
       // Apply to fusion nodes as well
-      fusionNodes.forEach((node, index) => {
+      fusionNodesWithPositions.forEach((node, index) => {
         if (node.id !== hovered) {
           // Fusion nodes come after projects + central node + connections
-          const nodeIndex = 1 + projects.length + projectConnections.length + index;
+          const nodeIndex = 1 + projects.length + projectConnections.length + fusionConnections.length + index;
           const fusionNode = groupRef.current?.children[nodeIndex];
           if (fusionNode) {
             // Create a different wave pattern for fusion nodes
@@ -320,16 +371,38 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
         );
       })}
       
+      {/* Fusion connections - render these before nodes */}
+      {fusionConnections.map((connection, index) => {
+        // Create a properly formatted array for THREE.js
+        const positions = new Float32Array([
+          connection.start.x, connection.start.y, connection.start.z,
+          connection.end.x, connection.end.y, connection.end.z
+        ]);
+        
+        // Create a buffer geometry directly with the positions
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        
+        return (
+          <primitive 
+            key={`fusion-connection-${index}`}
+            object={new THREE.Line(
+              geometry,
+              new THREE.LineBasicMaterial({ 
+                color: connection.color, 
+                opacity: 0.7,
+                transparent: true,
+                linewidth: 1.5 // Slightly thicker than regular connections
+              })
+            )}
+          />
+        );
+      })}
+      
       {/* Fusion nodes from Reality Fusion */}
-      {fusionNodes.map((node, index) => {
-        // Position fusion nodes in a different layer than projects
-        // Use the node's position if available, or calculate a new one
-        const position = node.position || {
-          // Create a position based on a spiral pattern different from projects
-          x: Math.cos(index * 0.7) * (6 + index * 0.5),
-          y: 4 + Math.sin(index * 0.5) * 1.5, // Higher layer for fusion nodes
-          z: Math.sin(index * 0.7) * (6 + index * 0.5)
-        };
+      {fusionNodesWithPositions.map((node, index) => {
+        // Use the calculated position
+        const position = node.calculatedPosition;
         
         // Sizing for fusion nodes - larger than regular project nodes
         const sphereSize = isMobile ? 1.0 : 0.8;
