@@ -136,6 +136,33 @@ const GodMode: React.FC = () => {
     return () => clearInterval(interval);
   }, [viewMode, notifications, addNotification, playError]);
   
+  // Keyboard handler for G key to toggle God Mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle God Mode with G key
+      if (e.code === 'KeyG') {
+        if (viewMode === 'godmode') {
+          setViewMode('default');
+        } else {
+          setViewMode('godmode');
+          playSuccess();
+          
+          // Welcome to God Mode notification
+          addNotification({
+            title: "God Mode Activated",
+            message: "System monitoring and advanced controls are now available.",
+            type: "success",
+            priority: "medium",
+            source: "System Core"
+          });
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [viewMode, setViewMode, playSuccess, addNotification]);
+  
   return (
     <React.Fragment>
       {/* Notification Panel */}

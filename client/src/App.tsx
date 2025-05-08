@@ -31,6 +31,7 @@ const controls = [
   { name: "select", keys: ["Space"] },
   { name: "menu", keys: ["KeyM"] },
   { name: "assistant", keys: ["KeyI"] },
+  { name: "godmode", keys: ["KeyG"] }, // G key for GodMode
 ];
 
 // Main App component
@@ -48,7 +49,8 @@ function App() {
     setSuccessSound,
     setErrorSound,
     setNotificationSound, 
-    startBackgroundMusic, 
+    startBackgroundMusic,
+    playSuccess,
     isMuted 
   } = useAudio();
   
@@ -91,7 +93,75 @@ function App() {
   // Show the canvas once everything is loaded
   useEffect(() => {
     setShowCanvas(true);
-  }, []);
+    
+    // Add welcome notification after a short delay
+    const timer = setTimeout(() => {
+      // Welcome notification
+      addNotification({
+        title: "Welcome to NEXUSFORGE OS",
+        message: "System initialized. Access God Mode for advanced features and system monitoring.",
+        type: "info",
+        priority: "medium",
+        source: "System Core"
+      });
+      
+      // Tutorial notification
+      setTimeout(() => {
+        addNotification({
+          title: "Navigation Tutorial",
+          message: "Use the navigation controls to explore the universe. Switch views using the top menu.",
+          type: "success",
+          priority: "low",
+          source: "Tutorial System"
+        });
+      }, 5000);
+      
+      // GodMode activation hint
+      setTimeout(() => {
+        addNotification({
+          title: "God Mode Access",
+          message: "Press 'G' key to toggle God Mode for system monitoring and advanced controls.",
+          type: "info",
+          priority: "medium",
+          source: "System Core"
+        });
+      }, 10000);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, [addNotification]);
+  
+  // Keyboard handler for G key to toggle God Mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle God Mode with G key
+      if (e.code === 'KeyG') {
+        const { viewMode } = useGame.getState();
+        
+        // Toggle the view mode
+        if (viewMode === 'godmode') {
+          setViewMode('default');
+        } else {
+          setViewMode('godmode');
+          
+          // Add notification for activation
+          addNotification({
+            title: "God Mode Activated",
+            message: "System monitoring and advanced controls are now available.",
+            type: "success",
+            priority: "medium",
+            source: "System Core"
+          });
+        }
+        
+        // Play a success sound
+        playSuccess();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setViewMode, playSuccess, addNotification]);
   
   return (
     <Router>
