@@ -2,6 +2,9 @@ import React, { Suspense, useState, useEffect, lazy } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Loader, KeyboardControls } from "@react-three/drei";
 import { Toaster } from "sonner";
+import { RefreshCw } from "lucide-react";
+import { Button } from "./components/ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "./components/ui/dialog";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import NotFound from "./pages/not-found";
 import ThreeScene from "./components/ThreeScene";
@@ -17,6 +20,7 @@ import ContextualHelp from "./components/ContextualHelp";
 import UserPreferences from "./components/UserPreferences";
 import ShortcutGuide from "./components/ShortcutGuide";
 import SystemStatus from "./components/SystemStatus";
+import RealityFusion from "./components/RealityFusion";
 import { useAudio } from "./lib/stores/useAudio";
 import { useGame } from "./lib/stores/useGame";
 import { useIsMobile } from "./hooks/use-is-mobile";
@@ -59,7 +63,8 @@ function App() {
     setErrorSound,
     setNotificationSound, 
     startBackgroundMusic,
-    isMuted 
+    isMuted,
+    playNotification
   } = useAudio();
   
   // Load audio files
@@ -134,6 +139,17 @@ function App() {
           source: "System Core"
         });
       }, 10000);
+      
+      // Reality Fusion Lab hint
+      setTimeout(() => {
+        addNotification({
+          title: "Reality Fusion Lab Available",
+          message: "Access the Reality Fusion Lab to combine different forms of data across realities.",
+          type: "success",
+          priority: "high",
+          source: "Reality Core"
+        });
+      }, 15000);
     }, 2000);
     
     return () => clearTimeout(timer);
@@ -245,6 +261,24 @@ function App() {
                 <Suspense fallback={<div>Loading search...</div>}>
                   <GlobalSearch />
                 </Suspense>
+                
+                {/* Reality Fusion Lab */}
+                <div className="fixed bottom-4 right-4 z-50">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        className="rounded-full shadow-lg flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                        onClick={() => playNotification()}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        <span>Reality Fusion Lab</span>
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-5xl h-[80vh] p-0">
+                      <RealityFusion />
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
             }
           />
