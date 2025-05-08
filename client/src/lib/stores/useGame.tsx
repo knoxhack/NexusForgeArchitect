@@ -60,6 +60,9 @@ interface GameState {
   // Fusion-specific actions
   createFusionNode: (name: string, sourceDataIds: string[], metadata?: Record<string, any>) => string;
   getFusionNodes: () => UniverseNode[];
+  
+  // Tutorial management
+  resetTutorial: () => void;
 }
 
 export const useGame = create<GameState>()(
@@ -148,6 +151,14 @@ export const useGame = create<GameState>()(
       completeTutorial: () => {
         set((state) => ({
           tutorialCompleted: true,
+          lastInteraction: Date.now(),
+          interactionCount: state.interactionCount + 1
+        }));
+      },
+
+      resetTutorial: () => {
+        set((state) => ({
+          tutorialCompleted: false,
           lastInteraction: Date.now(),
           interactionCount: state.interactionCount + 1
         }));
