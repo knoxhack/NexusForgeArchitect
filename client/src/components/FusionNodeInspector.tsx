@@ -23,7 +23,7 @@ export const FusionNodeInspector = ({ nodeId, onClose }: FusionNodeInspectorProp
   const { addNotification } = useNotifications();
   
   // Find the fusion node
-  const node = universeNodes.find(n => n.id === nodeId && n.type === "fusion");
+  const node = universeNodes.find((n: UniverseNode) => n.id === nodeId && n.type === "fusion");
   
   if (!node) {
     return (

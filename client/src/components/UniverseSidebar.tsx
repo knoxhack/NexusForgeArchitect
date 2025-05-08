@@ -20,7 +20,7 @@ export const UniverseSidebar: React.FC<UniverseSidebarProps> = ({ className = ""
   
   // Check if the selected node is a fusion node
   const selectedFusionNode = selectedNodeId 
-    ? universeNodes.find(node => node.id === selectedNodeId && node.type === "fusion")
+    ? universeNodes.find((node: UniverseNode) => node.id === selectedNodeId && node.type === "fusion")
     : null;
   
   // Handle closing the sidebar

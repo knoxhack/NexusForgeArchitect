@@ -100,7 +100,7 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
   const fusionNodesWithPositions = useMemo(() => {
     return universeNodes
       .filter(node => node.type === "fusion")
-      .map((node, index) => ({
+      .map((node: UniverseNode, index: number) => ({
         ...node,
         calculatedPosition: node.position || {
           // Create a position based on a spiral pattern different from projects
@@ -400,14 +400,21 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
       })}
       
       {/* Fusion nodes from Reality Fusion */}
-      {fusionNodesWithPositions.map((node, index) => {
+      {fusionNodesWithPositions.map((node: typeof fusionNodesWithPositions[0], index: number) => {
         // Use the calculated position
         const position = node.calculatedPosition;
+        const isSelected = selectedNodeId === node.id;
+        const isHovered = hovered === node.id;
         
         // Sizing for fusion nodes - larger than regular project nodes
         const sphereSize = isMobile ? 1.0 : 0.8;
         const fontSize = isMobile ? 0.5 : 0.4;
         const labelYOffset = isMobile ? 1.4 : 1.2;
+        
+        // Calculate compatibility and get metadata
+        const compatibility = node.metadata?.compatibility || 75;
+        const sourceCount = node.metadata?.sourceDataIds ? (node.metadata.sourceDataIds as string[]).length : 0;
+        const isOptimized = node.metadata?.optimized || false;
         
         return (
           <group 
@@ -420,23 +427,83 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
             onPointerOver={() => setHovered(node.id)}
             onPointerOut={() => setHovered(null)}
           >
-            {/* Fusion node sphere */}
+            {/* Selection glow effect */}
+            {isSelected && (
+              <mesh>
+                <sphereGeometry args={[sphereSize * 1.5, 16, 16]} />
+                <meshBasicMaterial 
+                  color="#9333ea"
+                  transparent={true}
+                  opacity={0.15}
+                />
+              </mesh>
+            )}
+            
+            {/* Particle effects for selected/hovered nodes */}
+            {(isSelected || isHovered) && (
+              <>
+                <pointLight 
+                  position={[0, 0, 0]} 
+                  color="#9333ea" 
+                  intensity={2} 
+                  distance={3}
+                />
+                <mesh position={[
+                  Math.sin(Date.now() * 0.001) * sphereSize * 1.7,
+                  Math.cos(Date.now() * 0.001) * sphereSize * 1.7,
+                  Math.sin(Date.now() * 0.002) * sphereSize * 1.7
+                ]}>
+                  <sphereGeometry args={[0.15, 8, 8]} />
+                  <meshBasicMaterial color="#d8b4fe" />
+                </mesh>
+                <mesh position={[
+                  Math.sin(Date.now() * 0.001 + Math.PI) * sphereSize * 1.7,
+                  Math.cos(Date.now() * 0.001 + Math.PI) * sphereSize * 1.7,
+                  Math.sin(Date.now() * 0.002 + Math.PI) * sphereSize * 1.7
+                ]}>
+                  <sphereGeometry args={[0.15, 8, 8]} />
+                  <meshBasicMaterial color="#d8b4fe" />
+                </mesh>
+              </>
+            )}
+            
+            {/* Main fusion node geometry */}
             <mesh>
               <dodecahedronGeometry args={[sphereSize, isMobile ? 0 : 1]} />
               <meshStandardMaterial 
                 color={node.color || "#7c3aed"} // Purple default for fusion nodes
                 emissive={node.color || "#7c3aed"}
-                emissiveIntensity={0.3}
+                emissiveIntensity={isSelected ? 0.6 : 0.3}
                 roughness={0.2}
                 metalness={0.9}
               />
             </mesh>
             
+            {/* Source data count rings */}
+            {sourceCount > 0 && (
+              <mesh rotation={[Math.PI/2, 0, 0]}>
+                <torusGeometry args={[sphereSize * 1.2, 0.05, 16, 32]} />
+                <meshBasicMaterial 
+                  color="#a855f7" 
+                  transparent={true}
+                  opacity={0.7}
+                />
+              </mesh>
+            )}
+            
+            {/* Optimization status indicator */}
+            {isOptimized && (
+              <mesh position={[0, sphereSize * 1.2, 0]}>
+                <sphereGeometry args={[0.2, 8, 8]} />
+                <meshBasicMaterial color="#22c55e" />
+              </mesh>
+            )}
+            
             {/* Fusion node label */}
             <Text
               position={[0, labelYOffset, 0]}
               fontSize={fontSize}
-              color="white"
+              color={isSelected ? "#f5f3ff" : "white"}
               anchorX="center"
               anchorY="middle"
               outlineWidth={0.02}
@@ -447,17 +514,29 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
             </Text>
             
             {/* Show fusion details on hover or selection */}
-            {(hovered === node.id || selectedNodeId === node.id) && (
+            {(isHovered || isSelected) && (
               <Html
                 position={[0, -1.2, 0]}
                 center
                 distanceFactor={isMobile ? 10 : 15}
                 occlude
               >
-                <div className={`bg-black/80 p-2 rounded text-white border border-purple-500 ${isMobile ? 'text-sm w-48' : 'text-xs w-40'}`}>
+                <div className={`bg-black/80 p-2 rounded text-white border ${isSelected ? 'border-violet-400' : 'border-purple-500'} ${isMobile ? 'text-sm w-56' : 'text-xs w-48'}`}>
                   <p className="font-bold">{node.name}</p>
                   <p className="opacity-80">Reality Fusion</p>
+                  <div className="flex justify-between text-[10px] mt-1">
+                    <span className="text-purple-300">Compatibility: {compatibility}%</span>
+                    <span className="text-blue-300">Sources: {sourceCount}</span>
+                  </div>
                   <p className="text-purple-300 mt-1 text-[10px]">Created: {new Date(node.dateCreated).toLocaleDateString()}</p>
+                  {isOptimized && (
+                    <p className="text-green-300 text-[10px]">Optimized ✓</p>
+                  )}
+                  {isSelected && (
+                    <p className="text-green-300 text-[10px] mt-1">
+                      <span className="animate-pulse">▶</span> Inspect in sidebar
+                    </p>
+                  )}
                 </div>
               </Html>
             )}
