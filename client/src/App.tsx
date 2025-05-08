@@ -22,6 +22,7 @@ import ShortcutGuide from "./components/ShortcutGuide";
 import SystemStatus from "./components/SystemStatus";
 import RealityFusion from "./components/RealityFusion";
 import { UniverseSidebar } from "./components/UniverseSidebar";
+import { WelcomeModal } from "./components/WelcomeModal";
 import { useAudio } from "./lib/stores/useAudio";
 import { useGame } from "./lib/stores/useGame";
 import { useIsMobile } from "./hooks/use-is-mobile";
@@ -283,6 +284,9 @@ function App() {
                     </DialogContent>
                   </Dialog>
                 </div>
+
+                {/* Welcome Modal */}
+                <WelcomeModal />
               </div>
             }
           />

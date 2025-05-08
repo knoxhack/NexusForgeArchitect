@@ -72,7 +72,8 @@ const initialProjects: Project[] = [
 interface ProjectState {
   projects: Project[];
   selectedProject: Project | null;
-  selectProject: (id: string) => void;
+  selectProject: (id: string | null) => void;
+  clearSelectedProject: () => void;
   addProject: (project: Omit<Project, "id" | "createdAt" | "updatedAt">) => void;
   updateProject: (project: Project) => void;
   deleteProject: (id: string) => void;
@@ -84,10 +85,19 @@ export const useProjects = create<ProjectState>()(
       projects: initialProjects,
       selectedProject: null,
       
-      selectProject: (id: string) => {
+      selectProject: (id: string | null) => {
+        if (id === null) {
+          set({ selectedProject: null });
+          return;
+        }
+        
         const { projects } = get();
         const project = projects.find(p => p.id === id) || null;
         set({ selectedProject: project });
+      },
+      
+      clearSelectedProject: () => {
+        set({ selectedProject: null });
       },
       
       addProject: (projectData) => {

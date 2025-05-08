@@ -1,5 +1,5 @@
 import React from "react";
-import { useGame } from "@/lib/stores/useGame";
+import { useGame, UniverseNode } from "@/lib/stores/useGame";
 import { FusionNodeInspector } from "./FusionNodeInspector";
 import { useProjects } from "@/lib/stores/useProjects";
 import { Button } from "./ui/button";
@@ -11,7 +11,7 @@ interface UniverseSidebarProps {
 
 export const UniverseSidebar: React.FC<UniverseSidebarProps> = ({ className = "" }) => {
   const { universeNodes, selectedNodeId, selectNode } = useGame();
-  const { selectedProject, selectProject } = useProjects();
+  const { selectedProject, clearSelectedProject } = useProjects();
   
   // If no node is selected, return null
   if (!selectedNodeId && !selectedProject) {
@@ -29,7 +29,7 @@ export const UniverseSidebar: React.FC<UniverseSidebarProps> = ({ className = ""
       selectNode("");
     }
     if (selectedProject) {
-      selectProject(null);
+      clearSelectedProject();
     }
   };
   
