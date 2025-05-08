@@ -15,6 +15,9 @@ import { useGame } from "./lib/stores/useGame";
 import { useIsMobile } from "./hooks/use-is-mobile";
 import "@fontsource/inter";
 
+// Define view types
+type ViewType = "universe" | "timeline" | "assistant" | "stats";
+
 // Define keyboard control map for navigation
 const controls = [
   { name: "forward", keys: ["KeyW", "ArrowUp"] },
@@ -30,7 +33,7 @@ const controls = [
 
 // Main App component
 function App() {
-  const [activeView, setActiveView] = useState<string>("universe");
+  const [activeView, setActiveView] = useState<ViewType>("universe");
   const [showCanvas, setShowCanvas] = useState(false);
   const { phase } = useGame();
   const isMobile = useIsMobile();

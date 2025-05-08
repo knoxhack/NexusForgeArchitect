@@ -5,10 +5,14 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { useKeyboardControls } from "@react-three/drei";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { AudioControls } from "./AudioControls";
+import { HelpCircle } from "lucide-react";
+
+type ViewType = "universe" | "timeline" | "assistant" | "stats";
 
 interface NavigationProps {
-  activeView: string;
-  setActiveView: (view: string) => void;
+  activeView: ViewType;
+  setActiveView: (view: ViewType | ((prev: ViewType) => ViewType)) => void;
 }
 
 const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView }) => {
@@ -37,12 +41,12 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView }) =>
   useEffect(() => {
     if (menu) {
       // Toggle between universe and timeline views
-      setActiveView(prev => prev === "universe" ? "timeline" : "universe");
+      setActiveView((prev: ViewType) => prev === "universe" ? "timeline" : "universe");
     }
     
     if (assistant) {
       // Toggle between assistant and stats views
-      setActiveView(prev => prev === "assistant" ? "stats" : "assistant");
+      setActiveView((prev: ViewType) => prev === "assistant" ? "stats" : "assistant");
     }
   }, [menu, assistant, setActiveView]);
   
@@ -132,33 +136,17 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView }) =>
         </div>
         
         <div className="flex items-center space-x-2 md:space-x-4">
-          <Button
-            variant="ghost"
-            size={isMobile ? "sm" : "default"}
-            className="text-gray-300 hover:text-white hover:bg-gray-800"
-            onClick={toggleMute}
-          >
-            {isMuted ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              </svg>
-            )}
-          </Button>
+          {/* Audio Controls */}
+          <AudioControls showVolume={!isMobile} />
           
+          {/* Help Button */}
           <Button
             variant="ghost"
             size={isMobile ? "sm" : "default"}
             className="text-gray-300 hover:text-white hover:bg-gray-800"
             onClick={() => setShowHelp(true)}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <HelpCircle className="h-5 w-5" />
           </Button>
         </div>
       </div>
@@ -306,6 +294,17 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView }) =>
                   <p>Analytics and insights about your creative output and patterns</p>
                 </li>
               </ul>
+            </div>
+            
+            {/* Audio Settings */}
+            <div>
+              <h3 className="font-bold text-white mb-2">Audio Settings</h3>
+              <div className="flex items-center justify-between bg-gray-800/50 p-3 rounded-md">
+                <span className="text-gray-300">Audio Volume</span>
+                <div className="w-32">
+                  <AudioControls showVolume={true} />
+                </div>
+              </div>
             </div>
           </div>
         </DialogContent>
