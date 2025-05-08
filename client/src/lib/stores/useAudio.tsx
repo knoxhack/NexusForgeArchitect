@@ -5,6 +5,8 @@ interface AudioState {
   backgroundMusic: HTMLAudioElement | null;
   hitSound: HTMLAudioElement | null;
   successSound: HTMLAudioElement | null;
+  errorSound: HTMLAudioElement | null;
+  notificationSound: HTMLAudioElement | null;
   isMuted: boolean;
   volume: number; // Master volume from 0 to 1
   
@@ -12,12 +14,16 @@ interface AudioState {
   setBackgroundMusic: (music: HTMLAudioElement) => void;
   setHitSound: (sound: HTMLAudioElement) => void;
   setSuccessSound: (sound: HTMLAudioElement) => void;
+  setErrorSound: (sound: HTMLAudioElement) => void;
+  setNotificationSound: (sound: HTMLAudioElement) => void;
   
   // Control functions
   toggleMute: () => void;
   setVolume: (volume: number) => void;
   playHit: () => void;
   playSuccess: () => void;
+  playError: () => void;
+  playNotification: () => void;
   startBackgroundMusic: () => void;
   stopBackgroundMusic: () => void;
 }
@@ -28,6 +34,8 @@ export const useAudio = create<AudioState>()(
       backgroundMusic: null,
       hitSound: null,
       successSound: null,
+      errorSound: null,
+      notificationSound: null,
       isMuted: true, // Start muted by default
       volume: 0.7, // Default volume
       
@@ -42,6 +50,10 @@ export const useAudio = create<AudioState>()(
       setHitSound: (sound) => set({ hitSound: sound }),
       
       setSuccessSound: (sound) => set({ successSound: sound }),
+      
+      setErrorSound: (sound) => set({ errorSound: sound }),
+      
+      setNotificationSound: (sound) => set({ notificationSound: sound }),
       
       // Volume controls
       toggleMute: () => {
@@ -120,6 +132,33 @@ export const useAudio = create<AudioState>()(
           });
         } else if (isMuted) {
           console.log("Success sound skipped (muted)");
+        }
+      },
+      
+      playError: () => {
+        const { errorSound, isMuted, volume } = get();
+        if (errorSound && !isMuted) {
+          // Clone the sound to allow overlapping playback
+          const soundClone = errorSound.cloneNode() as HTMLAudioElement;
+          soundClone.volume = volume * 0.5;
+          soundClone.play().catch(error => {
+            console.log("Error sound play prevented:", error);
+          });
+        } else if (isMuted) {
+          console.log("Error sound skipped (muted)");
+        }
+      },
+      
+      playNotification: () => {
+        const { notificationSound, isMuted, volume } = get();
+        if (notificationSound && !isMuted) {
+          notificationSound.volume = volume * 0.4;
+          notificationSound.currentTime = 0;
+          notificationSound.play().catch(error => {
+            console.log("Notification sound play prevented:", error);
+          });
+        } else if (isMuted) {
+          console.log("Notification sound skipped (muted)");
         }
       }
     }),

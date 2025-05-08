@@ -120,10 +120,31 @@ const GodMode: React.FC = () => {
       {viewMode === "godmode" && (
         <div className="fixed inset-0 pointer-events-none">
           {/* Top header with system status */}
-          <div className="absolute top-20 left-4 right-4 bg-black/30 p-2 rounded-md backdrop-blur-sm text-white text-xs border border-cyan-500/30">
-            <div className="text-center text-cyan-400 font-bold mb-1">NEXUSFORGE OS: GOD MODE</div>
+          <div className="absolute top-20 left-4 right-4 bg-black/30 p-2 rounded-md backdrop-blur-sm text-white text-xs border border-cyan-500/30 pointer-events-auto">
+            <div 
+              className="text-center text-cyan-400 font-bold mb-1 cursor-pointer hover:text-cyan-300"
+              onClick={(e) => {
+                e.stopPropagation();
+                toast.success("NEXUSFORGE OS: 2.0.5-GodMode", {
+                  description: "All systems operational. Reality fusion at 100%.",
+                  duration: 5000
+                });
+                playSuccess();
+              }}
+            >
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-500 to-blue-500">
+                NEXUSFORGE OS: GOD MODE
+              </span>
+            </div>
             <div className="grid grid-cols-4 gap-1 text-center">
-              <div className="flex flex-col items-center">
+              <div 
+                className="flex flex-col items-center p-1 rounded hover:bg-black/20 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const status = stats.cpu > 90 ? "Critical" : stats.cpu > 75 ? "High" : "Normal";
+                  toast.info(`CPU load: ${status} (${stats.cpu}%)`);
+                }}
+              >
                 <span className="flex items-center gap-1">
                   <Cpu className="h-3 w-3" />
                   <span>CPU</span>
@@ -132,13 +153,26 @@ const GodMode: React.FC = () => {
                   {stats.cpu}%
                 </span>
               </div>
-              <div className="flex flex-col items-center">
+              <div 
+                className="flex flex-col items-center p-1 rounded hover:bg-black/20 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const status = stats.gpu > 90 ? "Critical" : stats.gpu > 75 ? "High" : "Normal";
+                  toast.info(`GPU load: ${status} (${stats.gpu}%)`);
+                }}
+              >
                 <span>GPU</span>
                 <span className={`${stats.gpu > 90 ? 'text-red-400' : 'text-yellow-400'}`}>
                   {stats.gpu}%
                 </span>
               </div>
-              <div className="flex flex-col items-center">
+              <div 
+                className="flex flex-col items-center p-1 rounded hover:bg-black/20 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toast.info(`Memory usage: ${stats.memory}GB / 8GB`);
+                }}
+              >
                 <span className="flex items-center gap-1">
                   <Database className="h-3 w-3" />
                   <span>MEM</span>
@@ -147,7 +181,15 @@ const GodMode: React.FC = () => {
                   {stats.memory}GB
                 </span>
               </div>
-              <div className="flex flex-col items-center">
+              <div 
+                className="flex flex-col items-center p-1 rounded hover:bg-black/20 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const status = stats.fps < 30 ? "Low" : stats.fps < 45 ? "Medium" : "High";
+                  toast.info(`Framerate: ${status} (${stats.fps} FPS)`);
+                  playSuccess();
+                }}
+              >
                 <span className="flex items-center gap-1">
                   <BarChart3 className="h-3 w-3" />
                   <span>FPS</span>
@@ -160,36 +202,67 @@ const GodMode: React.FC = () => {
           </div>
           
           {/* Left side vertical metrics panel */}
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/30 p-2 rounded-md backdrop-blur-sm text-white text-xs border border-cyan-500/30">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/30 p-2 rounded-md backdrop-blur-sm text-white text-xs border border-cyan-500/30 pointer-events-auto">
             <div className="mb-2 text-cyan-400 font-bold text-center">METRICS</div>
             <div className="space-y-2">
-              <div className="flex justify-between gap-3">
+              <div 
+                className="flex justify-between gap-3 hover:bg-black/20 p-1 rounded cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toast.info(`${projects.length} projects in database`);
+                }}
+              >
                 <span>Projects:</span>
                 <span className="text-green-400">{projects.length}</span>
               </div>
-              <div className="flex justify-between gap-3">
+              <div 
+                className="flex justify-between gap-3 hover:bg-black/20 p-1 rounded cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toast.info(`${stats.connections} neural network connections mapped`);
+                }}
+              >
                 <span>Connections:</span>
                 <span className="text-green-400">{stats.connections}</span>
               </div>
-              <div className="flex justify-between gap-3">
+              <div 
+                className="flex justify-between gap-3 hover:bg-black/20 p-1 rounded cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toast.info(`${stats.sessions} active creator sessions`);
+                }}
+              >
                 <span>Sessions:</span>
                 <span className="text-green-400">{stats.sessions}</span>
               </div>
-              <div className="flex justify-between gap-3">
+              <div 
+                className="flex justify-between gap-3 hover:bg-black/20 p-1 rounded cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toast.info(`System uptime: ${Math.floor(stats.uptime / 60)}h ${stats.uptime % 60}m`);
+                }}
+              >
                 <span>Uptime:</span>
                 <span className="text-green-400">
                   {Math.floor(stats.uptime / 60)}h {stats.uptime % 60}m
                 </span>
               </div>
-              <div className="flex justify-between gap-3">
+              <div 
+                className="flex justify-between gap-3 hover:bg-black/20 p-1 rounded cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toast.info(`${interactionCount} total user interactions recorded`);
+                  playSuccess();
+                }}
+              >
                 <span>Interactions:</span>
                 <span className="text-cyan-400">{interactionCount}</span>
               </div>
             </div>
           </div>
           
-          {/* Bottom command center */}
-          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/40 p-2 rounded-md backdrop-blur-md text-white text-xs border border-cyan-500/50 w-72 max-w-full">
+          {/* Bottom command center - with pointer-events-auto to make buttons clickable */}
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/40 p-2 rounded-md backdrop-blur-md text-white text-xs border border-cyan-500/50 w-72 max-w-full pointer-events-auto">
             <div className="grid grid-cols-3 gap-1 text-center">
               <div 
                 className="bg-black/30 p-1 rounded cursor-pointer pulse-animation hover:bg-black/50"
