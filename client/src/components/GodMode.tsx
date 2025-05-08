@@ -4,8 +4,9 @@ import { useAudio } from "@/lib/stores/useAudio";
 import { useProjects } from "@/lib/stores/useProjects";
 import { useNotifications } from "@/lib/stores/useNotifications";
 import { Badge } from "@/components/ui/badge";
+import { EnhancedTooltip } from "@/components/ui/EnhancedTooltip";
 import { toast } from "sonner";
-import { Mic, BarChart3, Database, Cpu, BellOff, Bell } from "lucide-react";
+import { Mic, BarChart3, Database, Cpu, BellOff, Bell, Info, HelpCircle } from "lucide-react";
 import NotificationsPanel from "./NotificationsPanel";
 
 // Component for advanced "God Mode" features
@@ -170,33 +171,85 @@ const GodMode: React.FC = () => {
       
       <div className="fixed bottom-16 right-4 z-50">
         <div className="relative flex gap-2">
-          {/* Voice Commands Button */}
-          <button
-            onClick={toggleVoiceCommands}
-            className={`p-3 rounded-full shadow-lg transition-all duration-300 ${
-              listening 
-                ? "bg-red-500 text-white pulse-animation" 
-                : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
-            }`}
-            title={speechRecognitionSupported ? "Activate voice commands" : "Voice commands not supported"}
-            disabled={!speechRecognitionSupported}
+          {/* Help Button - always visible */}
+          <EnhancedTooltip
+            content="Get help with NEXUSFORGE OS controls and features"
+            variant="info"
+            side="left"
           >
-            <Mic className="h-5 w-5" />
-          </button>
+            <button
+              onClick={() => {
+                playNotification();
+                toast.success("NEXUSFORGE OS Help", {
+                  description: "Press G to toggle God Mode. Use voice commands or keyboard shortcuts for navigation.",
+                  duration: 6000
+                });
+                
+                // Show additional help messages with a delay
+                setTimeout(() => {
+                  toast.info("Navigation Tips", {
+                    description: "Use arrow keys to navigate the universe. Click on projects to view details.",
+                    duration: 5000
+                  });
+                }, 1000);
+                
+                // Show keyboard shortcuts
+                setTimeout(() => {
+                  toast.info("Keyboard Shortcuts", {
+                    description: "G: Toggle God Mode | M: Menu | I: AI Assistant",
+                    duration: 7000
+                  });
+                }, 2500);
+              }}
+              className="p-3 rounded-full shadow-lg bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-all duration-300"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </button>
+          </EnhancedTooltip>
+        
+          {/* Voice Commands Button */}
+          <EnhancedTooltip 
+            content={
+              speechRecognitionSupported 
+                ? "Activate voice commands for hands-free control of NEXUSFORGE OS" 
+                : "Voice commands not supported in your browser"
+            }
+            variant={speechRecognitionSupported ? "info" : "warning"}
+          >
+            <button
+              onClick={toggleVoiceCommands}
+              className={`p-3 rounded-full shadow-lg transition-all duration-300 ${
+                listening 
+                  ? "bg-red-500 text-white pulse-animation" 
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
+              }`}
+              disabled={!speechRecognitionSupported}
+            >
+              <Mic className="h-5 w-5" />
+            </button>
+          </EnhancedTooltip>
           
           {/* Notifications Toggle Button - only visible in god mode */}
           {viewMode === "godmode" && (
-            <button
-              onClick={() => {
-                toggleNotifications();
-                playNotification();
-                toast.info(notifications ? "Notifications disabled" : "Notifications enabled");
-              }}
-              className="p-3 rounded-full shadow-lg bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-all duration-300"
-              title={notifications ? "Disable notifications" : "Enable notifications"}
+            <EnhancedTooltip
+              content={
+                notifications 
+                  ? "Disable system notifications" 
+                  : "Enable real-time system notifications and alerts"
+              }
+              variant={notifications ? "default" : "success"}
             >
-              {notifications ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
-            </button>
+              <button
+                onClick={() => {
+                  toggleNotifications();
+                  playNotification();
+                  toast.info(notifications ? "Notifications disabled" : "Notifications enabled");
+                }}
+                className="p-3 rounded-full shadow-lg bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-all duration-300"
+              >
+                {notifications ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+              </button>
+            </EnhancedTooltip>
           )}
           
           {transcript && (
@@ -230,87 +283,109 @@ const GodMode: React.FC = () => {
               </span>
             </div>
             <div className="grid grid-cols-4 gap-1 text-center">
-              <div 
-                className="flex flex-col items-center p-1 rounded hover:bg-black/20 cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const status = stats.cpu > 90 ? "Critical" : stats.cpu > 75 ? "High" : "Normal";
-                  if (stats.cpu > 90) {
-                    playError();
-                    toast.error(`CPU load: ${status} (${stats.cpu}%)`);
-                  } else {
-                    playNotification();
-                    toast.info(`CPU load: ${status} (${stats.cpu}%)`);
-                  }
-                }}
+              <EnhancedTooltip
+                content={`Neural processing unit load: ${stats.cpu > 90 ? 'Critical' : stats.cpu > 75 ? 'High' : 'Normal'}`}
+                variant={stats.cpu > 90 ? "error" : stats.cpu > 75 ? "warning" : "success"}
               >
-                <span className="flex items-center gap-1">
-                  <Cpu className="h-3 w-3" />
-                  <span>CPU</span>
-                </span>
-                <span className={`${stats.cpu > 90 ? 'text-red-400' : 'text-green-400'}`}>
-                  {stats.cpu}%
-                </span>
-              </div>
-              <div 
-                className="flex flex-col items-center p-1 rounded hover:bg-black/20 cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const status = stats.gpu > 90 ? "Critical" : stats.gpu > 75 ? "High" : "Normal";
-                  if (stats.gpu > 90) {
-                    playError();
-                    toast.error(`GPU load: ${status} (${stats.gpu}%)`);
-                  } else {
-                    playNotification();
-                    toast.info(`GPU load: ${status} (${stats.gpu}%)`);
-                  }
-                }}
+                <div 
+                  className="flex flex-col items-center p-1 rounded hover:bg-black/20 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const status = stats.cpu > 90 ? "Critical" : stats.cpu > 75 ? "High" : "Normal";
+                    if (stats.cpu > 90) {
+                      playError();
+                      toast.error(`CPU load: ${status} (${stats.cpu}%)`);
+                    } else {
+                      playNotification();
+                      toast.info(`CPU load: ${status} (${stats.cpu}%)`);
+                    }
+                  }}
+                >
+                  <span className="flex items-center gap-1">
+                    <Cpu className="h-3 w-3" />
+                    <span>CPU</span>
+                  </span>
+                  <span className={`${stats.cpu > 90 ? 'text-red-400' : 'text-green-400'}`}>
+                    {stats.cpu}%
+                  </span>
+                </div>
+              </EnhancedTooltip>
+              <EnhancedTooltip
+                content={`Visualization engine load: ${stats.gpu > 90 ? 'Critical' : stats.gpu > 75 ? 'High' : 'Normal'}`}
+                variant={stats.gpu > 90 ? "error" : stats.gpu > 75 ? "warning" : "success"}
               >
-                <span>GPU</span>
-                <span className={`${stats.gpu > 90 ? 'text-red-400' : 'text-yellow-400'}`}>
-                  {stats.gpu}%
-                </span>
-              </div>
-              <div 
-                className="flex flex-col items-center p-1 rounded hover:bg-black/20 cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toast.info(`Memory usage: ${stats.memory}GB / 8GB`);
-                }}
+                <div 
+                  className="flex flex-col items-center p-1 rounded hover:bg-black/20 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const status = stats.gpu > 90 ? "Critical" : stats.gpu > 75 ? "High" : "Normal";
+                    if (stats.gpu > 90) {
+                      playError();
+                      toast.error(`GPU load: ${status} (${stats.gpu}%)`);
+                    } else {
+                      playNotification();
+                      toast.info(`GPU load: ${status} (${stats.gpu}%)`);
+                    }
+                  }}
+                >
+                  <span>GPU</span>
+                  <span className={`${stats.gpu > 90 ? 'text-red-400' : 'text-yellow-400'}`}>
+                    {stats.gpu}%
+                  </span>
+                </div>
+              </EnhancedTooltip>
+              
+              <EnhancedTooltip
+                content="Neural network memory allocation (8GB total)"
+                variant="info"
               >
-                <span className="flex items-center gap-1">
-                  <Database className="h-3 w-3" />
-                  <span>MEM</span>
-                </span>
-                <span className="text-blue-400">
-                  {stats.memory}GB
-                </span>
-              </div>
-              <div 
-                className="flex flex-col items-center p-1 rounded hover:bg-black/20 cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const status = stats.fps < 30 ? "Low" : stats.fps < 45 ? "Medium" : "High";
-                  if (stats.fps < 30) {
-                    playError();
-                    toast.error(`Framerate: ${status} (${stats.fps} FPS)`);
-                  } else if (stats.fps > 55) {
-                    playSuccess();
-                    toast.success(`Framerate: ${status} (${stats.fps} FPS)`);
-                  } else {
-                    playNotification();
-                    toast.info(`Framerate: ${status} (${stats.fps} FPS)`);
-                  }
-                }}
+                <div 
+                  className="flex flex-col items-center p-1 rounded hover:bg-black/20 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toast.info(`Memory usage: ${stats.memory}GB / 8GB`);
+                  }}
+                >
+                  <span className="flex items-center gap-1">
+                    <Database className="h-3 w-3" />
+                    <span>MEM</span>
+                  </span>
+                  <span className="text-blue-400">
+                    {stats.memory}GB
+                  </span>
+                </div>
+              </EnhancedTooltip>
+              
+              <EnhancedTooltip
+                content={`Reality rendering framerate: ${stats.fps < 30 ? 'Low' : stats.fps < 45 ? 'Medium' : 'High'}`}
+                variant={stats.fps < 30 ? "error" : stats.fps < 45 ? "warning" : "success"}
               >
-                <span className="flex items-center gap-1">
-                  <BarChart3 className="h-3 w-3" />
-                  <span>FPS</span>
-                </span>
-                <span className={`${stats.fps < 30 ? 'text-red-400' : 'text-purple-400'}`}>
-                  {stats.fps}
-                </span>
-              </div>
+                <div 
+                  className="flex flex-col items-center p-1 rounded hover:bg-black/20 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const status = stats.fps < 30 ? "Low" : stats.fps < 45 ? "Medium" : "High";
+                    if (stats.fps < 30) {
+                      playError();
+                      toast.error(`Framerate: ${status} (${stats.fps} FPS)`);
+                    } else if (stats.fps > 55) {
+                      playSuccess();
+                      toast.success(`Framerate: ${status} (${stats.fps} FPS)`);
+                    } else {
+                      playNotification();
+                      toast.info(`Framerate: ${status} (${stats.fps} FPS)`);
+                    }
+                  }}
+                >
+                  <span className="flex items-center gap-1">
+                    <BarChart3 className="h-3 w-3" />
+                    <span>FPS</span>
+                  </span>
+                  <span className={`${stats.fps < 30 ? 'text-red-400' : 'text-purple-400'}`}>
+                    {stats.fps}
+                  </span>
+                </div>
+              </EnhancedTooltip>
             </div>
           </div>
           
@@ -377,39 +452,59 @@ const GodMode: React.FC = () => {
           {/* Bottom command center - with pointer-events-auto to make buttons clickable */}
           <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/40 p-2 rounded-md backdrop-blur-md text-white text-xs border border-cyan-500/50 w-72 max-w-full pointer-events-auto">
             <div className="grid grid-cols-3 gap-1 text-center">
-              <div 
-                className="bg-black/30 p-1 rounded cursor-pointer pulse-animation hover:bg-black/50"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent event bubbling
-                  playSuccess();
-                  toast.info("Scanning universe for anomalies...");
-                  recordInteraction();
-                }}
+              <EnhancedTooltip
+                content="Scan universes for anomalies and project connection opportunities"
+                variant="info"
+                side="top"
               >
-                SCAN
-              </div>
-              <div 
-                className="bg-black/30 p-1 rounded cursor-pointer hover:bg-black/50"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent event bubbling
-                  playSuccess();
-                  toast.success("Build mode activated");
-                  recordInteraction();
-                }}
+                <div 
+                  className="bg-black/30 p-1 rounded cursor-pointer pulse-animation hover:bg-black/50"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent event bubbling
+                    playSuccess();
+                    toast.info("Scanning universe for anomalies...");
+                    recordInteraction();
+                  }}
+                >
+                  SCAN
+                </div>
+              </EnhancedTooltip>
+              
+              <EnhancedTooltip
+                content="Create new project nodes in the universe"
+                variant="success"
+                side="top"
               >
-                BUILD
-              </div>
-              <div 
-                className="bg-black/30 p-1 rounded cursor-pointer hover:bg-black/50"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent event bubbling
-                  playSuccess();
-                  toast.success("Neural pathways extended");
-                  recordInteraction();
-                }}
+                <div 
+                  className="bg-black/30 p-1 rounded cursor-pointer hover:bg-black/50"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent event bubbling
+                    playSuccess();
+                    toast.success("Build mode activated");
+                    recordInteraction();
+                  }}
+                >
+                  BUILD
+                </div>
+              </EnhancedTooltip>
+              
+              <EnhancedTooltip
+                content="Extend neural pathways between existing projects"
+                variant="info"
+                side="top"
               >
-                EXTEND
-              </div>
+                <div 
+                  className="bg-black/30 p-1 rounded cursor-pointer hover:bg-black/50"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent event bubbling
+                    playSuccess();
+                    toast.success("Neural pathways extended");
+                    recordInteraction();
+                  }}
+                >
+                  EXTEND
+                </div>
+              </EnhancedTooltip>
             </div>
             <div className="mt-1 text-center text-green-400 text-[10px]">
               COMMAND CENTER INITIALIZED • {new Date().toLocaleTimeString()}
