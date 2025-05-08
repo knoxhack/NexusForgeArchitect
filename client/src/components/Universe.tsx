@@ -8,8 +8,10 @@ import { useKeyboardControls } from "@react-three/drei";
 import { useAudio } from "@/lib/stores/useAudio";
 import { Project } from "@shared/types";
 
+type ViewType = "universe" | "timeline" | "assistant" | "stats";
+
 interface UniverseProps {
-  activeView: string;
+  activeView: ViewType;
   isMobile?: boolean;
 }
 

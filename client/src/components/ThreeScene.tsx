@@ -12,8 +12,10 @@ import Universe from "./Universe";
 import { useGame } from "@/lib/stores/useGame";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
+type ViewType = "universe" | "timeline" | "assistant" | "stats";
+
 interface ThreeSceneProps {
-  activeView: string;
+  activeView: ViewType;
 }
 
 const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
