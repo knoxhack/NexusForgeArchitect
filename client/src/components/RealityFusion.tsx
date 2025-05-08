@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { Layers, Cpu, Video, Music, Code, FileText, Upload, RefreshCw, X, Check, AlertTriangle } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { 
+  Layers, Cpu, Video, Music, Code, FileText, Upload, RefreshCw, X, Check, 
+  AlertTriangle, Search, Filter, TrendingUp, ListFilter, Zap, SlidersHorizontal,
+  Info, Wand2, ArrowDownUp, Eye
+} from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -7,6 +11,19 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
+import { Input } from "./ui/input";
+import { Slider } from "./ui/slider";
+import { Checkbox } from "./ui/checkbox";
+import { Switch } from "./ui/switch";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useAudio } from "../lib/stores/useAudio";
 import { useGame } from "../lib/stores/useGame";
 import { useNotifications } from "../lib/stores/useNotifications";
@@ -45,6 +62,12 @@ export default function RealityFusion() {
   const [currentFusion, setCurrentFusion] = useState<FusionResult | null>(null);
   const [showResult, setShowResult] = useState<boolean>(false);
   const [selectedRealityData, setSelectedRealityData] = useState<RealityData[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest" | "name">("newest");
+  const [filterByTags, setFilterByTags] = useState<string[]>([]);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
+  const [compatibilityThreshold, setCompatibilityThreshold] = useState<number>(65);
+  const [selectionMode, setSelectionMode] = useState<"single" | "multi">("single");
   
   // Get data from our reality fusion store
   const { 
@@ -70,10 +93,89 @@ export default function RealityFusion() {
     setSelectedRealityData(items);
   }, [selectedItems, realityData]);
   
-  // Filter data based on active tab
-  const filteredData = activeTab === "all" 
-    ? realityData 
-    : realityData.filter(item => item.type === activeTab);
+  // Extract all unique tags from reality data
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    realityData.forEach(item => {
+      item.tags.forEach(tag => tags.add(tag));
+    });
+    return Array.from(tags);
+  }, [realityData]);
+  
+  // Calculate compatibility between selected items
+  const calculateCompatibility = useMemo(() => {
+    if (selectedRealityData.length < 2) return 100;
+    
+    // Calculate "compatibility" based on selected data types
+    // This is a simulated calculation - would be more complex in a real app
+    let baseCompatibility = 100;
+    
+    // More items means more complexity, which reduces compatibility
+    baseCompatibility -= (selectedRealityData.length - 2) * 5;
+    
+    // Different types have different compatibility weights
+    const typeMap: Record<string, number> = {};
+    selectedRealityData.forEach(item => {
+      typeMap[item.type] = (typeMap[item.type] || 0) + 1;
+    });
+    
+    // If only one item of a type, small penalty
+    Object.values(typeMap).forEach(count => {
+      if (count === 1) baseCompatibility -= 5;
+    });
+    
+    // Certain combinations work better together
+    if (typeMap['audio'] && typeMap['video']) baseCompatibility += 10; // Audio-video is good
+    if (typeMap['code'] && typeMap['model']) baseCompatibility += 5; // Code-model can work
+    
+    // Cap the value between 20 and 100
+    return Math.max(20, Math.min(100, baseCompatibility));
+  }, [selectedRealityData]);
+  
+  // Apply all filtering, sorting, and searching
+  const processedData = useMemo(() => {
+    // First, filter by type
+    let result = activeTab === "all" 
+      ? realityData 
+      : realityData.filter(item => item.type === activeTab);
+    
+    // Then apply search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(
+        item => 
+          item.name.toLowerCase().includes(query) || 
+          item.description.toLowerCase().includes(query) ||
+          item.tags.some(tag => tag.toLowerCase().includes(query))
+      );
+    }
+    
+    // Filter by selected tags
+    if (filterByTags.length > 0) {
+      result = result.filter(
+        item => item.tags.some(tag => filterByTags.includes(tag))
+      );
+    }
+    
+    // Apply sorting
+    switch (sortOrder) {
+      case "newest":
+        result = [...result].sort((a, b) => 
+          new Date(b.dateCreated).getTime() - new Date(a.dateCreated).getTime()
+        );
+        break;
+      case "oldest":
+        result = [...result].sort((a, b) => 
+          new Date(a.dateCreated).getTime() - new Date(b.dateCreated).getTime()
+        );
+        break;
+      case "name":
+        result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+        break;
+    }
+    
+    return result;
+  }, [realityData, activeTab, searchQuery, filterByTags, sortOrder]);
     
   // Handle selecting an item
   const handleSelectItem = (item: RealityData) => {
@@ -255,127 +357,384 @@ export default function RealityFusion() {
           </TabsList>
           
           <TabsContent value={activeTab} className="mt-0">
+            {/* Search and filter bar */}
+            <div className="mb-4 flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Search by name, description, or tags..."
+                    className="pl-9"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                
+                <Select 
+                  value={sortOrder} 
+                  onValueChange={(value) => setSortOrder(value as "newest" | "oldest" | "name")}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <div className="flex items-center gap-2">
+                      <ArrowDownUp className="h-4 w-4" />
+                      <SelectValue placeholder="Sort by" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest First</SelectItem>
+                    <SelectItem value="oldest">Oldest First</SelectItem>
+                    <SelectItem value="name">Name (A-Z)</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        className={showAdvancedFilters ? "bg-muted" : ""}
+                      >
+                        <SlidersHorizontal className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Advanced Filters</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              
+              {showAdvancedFilters && (
+                <div className="p-3 bg-muted/50 border rounded-md flex flex-col gap-3">
+                  <div className="flex gap-2 items-center">
+                    <h4 className="text-sm font-medium">Selection Mode:</h4>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant={selectionMode === "single" ? "default" : "outline"} 
+                        size="sm"
+                        onClick={() => setSelectionMode("single")}
+                        className="h-7 px-2"
+                      >
+                        Single
+                      </Button>
+                      <Button 
+                        variant={selectionMode === "multi" ? "default" : "outline"} 
+                        size="sm"
+                        onClick={() => setSelectionMode("multi")}
+                        className="h-7 px-2"
+                      >
+                        Multi
+                      </Button>
+                    </div>
+                    <Separator orientation="vertical" className="h-6 mx-2" />
+                    <span className="text-sm">Filter by tags:</span>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex items-center gap-1 h-7"
+                        >
+                          <Filter className="h-3.5 w-3.5" />
+                          <span>Tags</span>
+                          {filterByTags.length > 0 && (
+                            <Badge variant="secondary" className="ml-1 py-0 h-5">
+                              {filterByTags.length}
+                            </Badge>
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="p-0 max-h-52 overflow-auto">
+                        <div className="p-2">
+                          {allTags.map((tag) => (
+                            <div key={tag} className="flex items-center space-x-2 p-1">
+                              <Checkbox 
+                                id={`tag-${tag}`}
+                                checked={filterByTags.includes(tag)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setFilterByTags([...filterByTags, tag]);
+                                  } else {
+                                    setFilterByTags(filterByTags.filter(t => t !== tag));
+                                  }
+                                }}
+                              />
+                              <label
+                                htmlFor={`tag-${tag}`}
+                                className="text-sm cursor-pointer"
+                              >
+                                {tag}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-medium min-w-[135px]">Compatibility Threshold:</h4>
+                    <Slider
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={[compatibilityThreshold]}
+                      onValueChange={(value) => setCompatibilityThreshold(value[0])}
+                      className="flex-1 mr-2"
+                    />
+                    <span className="text-sm font-mono bg-background px-2 py-1 rounded border min-w-[40px] text-center">
+                      {compatibilityThreshold}%
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <div>
+                  {processedData.length} {processedData.length === 1 ? 'item' : 'items'} found
+                  {searchQuery && <span className="ml-2">for "{searchQuery}"</span>}
+                  {filterByTags.length > 0 && (
+                    <span className="ml-2">
+                      with tags: {filterByTags.map(t => `"${t}"`).join(", ")}
+                    </span>
+                  )}
+                </div>
+                {(searchQuery || filterByTags.length > 0) && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      setSearchQuery("");
+                      setFilterByTags([]);
+                    }}
+                    className="h-6"
+                  >
+                    Clear filters
+                  </Button>
+                )}
+              </div>
+            </div>
+            
             <div className="flex gap-4">
               {/* Reality data grid */}
               <div className="flex-1">
                 <ScrollArea className="h-[400px] rounded-md border">
                   <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredData.map((item: RealityData) => (
-                      <div 
-                        key={item.id}
-                        className={`
-                          p-3 rounded-lg border cursor-pointer transition-all
-                          ${isSelected(item.id) 
-                            ? 'border-primary bg-primary/10 shadow-md' 
-                            : 'border-border hover:border-primary/50 hover:bg-muted'}
-                        `}
-                        onClick={() => handleSelectItem(item)}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex items-center gap-2">
-                            {getRealityIcon(item.type)}
-                            <span className="font-medium">{item.name}</span>
-                          </div>
-                          {isSelected(item.id) && (
-                            <Check className="h-4 w-4 text-primary" />
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>{formatDate(item.dateCreated)}</span>
-                          <span>{formatFileSize(item.size)}</span>
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {item.tags.map((tag: string, index: number) => (
-                            <Badge key={index} variant="outline" className="text-[10px]">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
+                    {processedData.length === 0 ? (
+                      <div className="col-span-2 py-12 flex flex-col items-center justify-center text-center text-muted-foreground">
+                        <Search className="h-12 w-12 mb-4 opacity-20" />
+                        <p>No matching items found</p>
+                        {(searchQuery || filterByTags.length > 0 || activeTab !== "all") && (
+                          <Button
+                            variant="link"
+                            onClick={() => {
+                              setSearchQuery("");
+                              setFilterByTags([]);
+                              setActiveTab("all");
+                            }}
+                            className="mt-2"
+                          >
+                            Clear all filters
+                          </Button>
+                        )}
                       </div>
-                    ))}
+                    ) : (
+                      processedData.map((item: RealityData) => (
+                        <div 
+                          key={item.id}
+                          className={`
+                            p-3 rounded-lg border cursor-pointer transition-all
+                            ${isSelected(item.id) 
+                              ? 'border-primary bg-primary/10 shadow-md' 
+                              : 'border-border hover:border-primary/50 hover:bg-muted'}
+                          `}
+                          onClick={() => handleSelectItem(item)}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex items-center gap-2">
+                              {getRealityIcon(item.type)}
+                              <span className="font-medium">{item.name}</span>
+                            </div>
+                            {isSelected(item.id) && (
+                              <Check className="h-4 w-4 text-primary" />
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>{formatDate(item.dateCreated)}</span>
+                            <span>{formatFileSize(item.size)}</span>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {item.tags.map((tag: string, index: number) => (
+                              <Badge key={index} variant="outline" className="text-[10px]">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </ScrollArea>
               </div>
               
               {/* Selection and controls */}
-              <div className="w-72 border rounded-md p-4 flex flex-col">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-medium">Selected Items</h3>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    disabled={selectedItems.length === 0}
-                    onClick={handleClearSelection}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+              <div className="w-80 border rounded-md flex flex-col">
+                <div className="p-3 border-b bg-muted/30 flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-primary" />
+                    <h3 className="font-medium">Selected Items</h3>
+                    {selectedItems.length > 0 && (
+                      <Badge variant="secondary" className="ml-1">
+                        {selectedItems.length}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={selectedItems.length === 0}
+                            onClick={handleClearSelection}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>Clear Selection</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                 </div>
                 
-                {selectedItems.length === 0 ? (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground p-4">
-                    <Layers className="h-10 w-10 mb-2 opacity-20" />
-                    <p className="text-sm">Select at least two items to begin the fusion process</p>
-                  </div>
-                ) : (
-                  <ScrollArea className="flex-1 mb-4">
-                    <div className="space-y-2">
-                      {selectedRealityData.map((item: RealityData) => (
-                        <div 
-                          key={item.id}
-                          className="flex items-center gap-2 p-2 rounded-md bg-background border"
-                        >
-                          {getRealityIcon(item.type)}
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm truncate">{item.name}</div>
-                            <div className="text-xs text-muted-foreground">{item.type}</div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => handleSelectItem(item)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
+                <div className="flex-1 flex flex-col">
+                  {selectedItems.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground p-6">
+                      <Layers className="h-12 w-12 mb-3 opacity-20" />
+                      <p className="text-sm">Select at least two items<br/>to begin the fusion process</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Different item types have varying compatibility ratings
+                      </p>
                     </div>
-                  </ScrollArea>
-                )}
-                
-                {selectedItems.length >= 2 && (
-                  <div className="mt-auto">
-                    <div className="text-sm text-muted-foreground mb-2">
-                      {selectedItems.length === 2 ? (
-                        <div className="flex items-center gap-1">
-                          <Check className="h-4 w-4 text-green-500" />
-                          <span>Compatible data types</span>
+                  ) : (
+                    <div className="p-3">
+                      <ScrollArea className="max-h-[250px]">
+                        <div className="space-y-2">
+                          {selectedRealityData.map((item: RealityData) => (
+                            <div 
+                              key={item.id}
+                              className="flex items-center gap-2 p-2 rounded-md bg-background border"
+                            >
+                              <div className="relative">
+                                {getRealityIcon(item.type)}
+                                <span className="absolute -bottom-1 -right-1 w-3 h-3 bg-background rounded-full flex items-center justify-center">
+                                  <span className="w-2 h-2 rounded-full bg-primary" />
+                                </span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm truncate">{item.name}</div>
+                                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <span className="capitalize">{item.type}</span>
+                                  <span className="text-[10px] text-muted-foreground/70">
+                                    • {item.tags.slice(0, 2).join(", ")}
+                                    {item.tags.length > 2 && "..."}
+                                  </span>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleSelectItem(item)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          <AlertTriangle className="h-4 w-4 text-amber-500" />
-                          <span>Complex fusion (may reduce compatibility)</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <Button 
-                      className="w-full" 
-                      onClick={handleStartFusion}
-                      disabled={fusionInProgress}
-                    >
-                      {fusionInProgress ? (
-                        <>Processing...</>
-                      ) : (
+                      </ScrollArea>
+                      
+                      {selectedItems.length >= 2 && (
                         <>
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                          Start Fusion
+                          <div className="mt-4 pt-3 border-t">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-sm font-medium">Compatibility</span>
+                              <span 
+                                className={`text-sm font-medium ${
+                                  calculateCompatibility > 80 
+                                    ? "text-green-500" 
+                                    : calculateCompatibility > 60 
+                                      ? "text-amber-500" 
+                                      : "text-red-500"
+                                }`}
+                              >
+                                {calculateCompatibility}%
+                              </span>
+                            </div>
+                            <Progress 
+                              value={calculateCompatibility} 
+                              className={`h-2 ${
+                                calculateCompatibility > 80 
+                                  ? "bg-green-500" 
+                                  : calculateCompatibility > 60 
+                                    ? "bg-amber-500" 
+                                    : "bg-red-500"
+                              }`}
+                            />
+                            
+                            <div className="mt-3 text-xs text-muted-foreground">
+                              {calculateCompatibility > 80 ? (
+                                <div className="flex items-center gap-1">
+                                  <Check className="h-3.5 w-3.5 text-green-500" />
+                                  <span>High compatibility, excellent fusion expected</span>
+                                </div>
+                              ) : calculateCompatibility > 60 ? (
+                                <div className="flex items-center gap-1">
+                                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                                  <span>Medium compatibility, some data loss possible</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+                                  <span>Low compatibility, significant data loss possible</span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <Button 
+                              className="w-full mt-3" 
+                              onClick={handleStartFusion}
+                              disabled={fusionInProgress}
+                              variant={calculateCompatibility < compatibilityThreshold ? "outline" : "default"}
+                            >
+                              {fusionInProgress ? (
+                                <>Processing...</>
+                              ) : (
+                                <>
+                                  <Wand2 className="h-4 w-4 mr-2" />
+                                  Start Fusion Process
+                                </>
+                              )}
+                            </Button>
+                            
+                            {calculateCompatibility < compatibilityThreshold && (
+                              <div className="mt-2 text-xs text-center text-red-500">
+                                Warning: Below compatibility threshold ({compatibilityThreshold}%)
+                              </div>
+                            )}
+                          </div>
                         </>
                       )}
-                    </Button>
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             
