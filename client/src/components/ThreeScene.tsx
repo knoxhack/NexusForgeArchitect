@@ -73,6 +73,9 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
           .subVectors(targetLookAt, targetPosition)
           .normalize();
         targetPosition.addScaledVector(direction, zoomSpeed * zoomDirection);
+        
+        // Log pinch zoom for debugging
+        console.log(`Pinch zoom: direction=${zoomDirection > 0 ? 'in' : 'out'}, distance=${distance.toFixed(1)}, prev=${prevDistance.toFixed(1)}`);
         return;
       }
       
@@ -89,8 +92,11 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
         y: touch.clientY,
       });
       
-      // Movement speed factor
-      const speed = 0.05;
+      // Movement speed factor - adjusted for screen size for consistent feel
+      // This makes controls work similarly regardless of device pixel density
+      const baseSpeed = 0.05;
+      const screenWidthFactor = window.innerWidth / 1000; // Normalize to a standard width
+      const speed = baseSpeed / Math.max(0.5, screenWidthFactor); // Prevent overly sensitive controls
       
       // Move based on touch deltas
       // Horizontal movement (left/right)
@@ -100,6 +106,11 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
       // Vertical movement (forward/backward)
       targetPosition.z += deltaY * speed;
       targetLookAt.z += deltaY * speed;
+      
+      // Log touch movement for debugging
+      if (deltaX !== 0 || deltaY !== 0) {
+        console.log(`Touch move: dx=${deltaX.toFixed(1)}, dy=${deltaY.toFixed(1)}, new pos=[${targetPosition.x.toFixed(1)}, ${targetPosition.y.toFixed(1)}, ${targetPosition.z.toFixed(1)}]`);
+      }
     };
     
     const handleTouchEnd = () => {
@@ -125,20 +136,22 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
   
   // Position the camera based on the active view
   useEffect(() => {
-    // Adjust camera position for mobile devices (bring it closer)
+    // More aggressive adjustments for mobile devices
+    // Both bring camera closer and adjust height for better perspective
     const mobileFactor = isMobile ? 0.7 : 1;
+    const mobileHeightAdjust = isMobile ? 1.2 : 1; // Slightly higher viewing angle on mobile
     
     if (activeView === "universe") {
-      targetPosition.set(0, 10 * mobileFactor, 20 * mobileFactor);
+      targetPosition.set(0, 10 * mobileHeightAdjust, 20 * mobileFactor);
       targetLookAt.set(0, 0, 0);
     } else if (activeView === "timeline") {
-      targetPosition.set(0, 5 * mobileFactor, 15 * mobileFactor);
+      targetPosition.set(0, 5 * mobileHeightAdjust, 15 * mobileFactor);
       targetLookAt.set(0, 0, -5 * mobileFactor);
     } else if (activeView === "assistant") {
-      targetPosition.set(5 * mobileFactor, 2 * mobileFactor, 10 * mobileFactor);
+      targetPosition.set(5 * mobileFactor, 2 * mobileHeightAdjust, 10 * mobileFactor);
       targetLookAt.set(0, 0, 0);
     } else if (activeView === "stats") {
-      targetPosition.set(-5 * mobileFactor, 8 * mobileFactor, 15 * mobileFactor);
+      targetPosition.set(-5 * mobileFactor, 8 * mobileHeightAdjust, 15 * mobileFactor);
       targetLookAt.set(0, 0, 0);
     }
     
