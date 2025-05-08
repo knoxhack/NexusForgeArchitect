@@ -6,6 +6,7 @@ import { useProjects } from "@/lib/stores/useProjects";
 import { useAIAssistant } from "@/lib/stores/useAIAssistant";
 import { useKeyboardControls } from "@react-three/drei";
 import { useAudio } from "@/lib/stores/useAudio";
+import { useGame } from "@/lib/stores/useGame";
 import { Project } from "@shared/types";
 
 type ViewType = "universe" | "timeline" | "assistant" | "stats";
@@ -18,6 +19,7 @@ interface UniverseProps {
 const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => {
   const { projects, selectedProject, selectProject } = useProjects();
   const { aiPersonas } = useAIAssistant();
+  const { viewMode, recordInteraction } = useGame();
   const groupRef = useRef<THREE.Group>(null);
   const { playHit } = useAudio();
   const [hovered, setHovered] = useState<number | null>(null);
@@ -107,8 +109,18 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
   // Animation for the universe rotation
   useFrame((state, delta) => {
     if (groupRef.current && activeView === "universe") {
-      // Slowly rotate the entire universe
-      groupRef.current.rotation.y += delta * 0.05;
+      // Adjust rotation speed based on viewMode
+      const rotationSpeed = viewMode === "godmode" ? delta * 0.08 : delta * 0.05;
+      groupRef.current.rotation.y += rotationSpeed;
+      
+      // In GodMode, add slight wobble for dynamic effect
+      if (viewMode === "godmode") {
+        const time = state.clock.getElapsedTime();
+        groupRef.current.rotation.x = Math.sin(time * 0.2) * 0.03;
+      } else {
+        // Reset wobble when not in GodMode
+        groupRef.current.rotation.x = 0;
+      }
     }
     
     // Make hovered projects pulse slightly
@@ -117,8 +129,36 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
       if (hoveredNode) {
         // Apply a subtle pulsing animation
         const time = state.clock.getElapsedTime();
-        const scale = 1 + Math.sin(time * 2) * 0.05;
+        
+        // Enhance the pulse effect in GodMode
+        const pulseIntensity = viewMode === "godmode" ? 0.08 : 0.05;
+        const pulseSpeed = viewMode === "godmode" ? 3 : 2;
+        const scale = 1 + Math.sin(time * pulseSpeed) * pulseIntensity;
+        
         hoveredNode.scale.set(scale, scale, scale);
+      }
+    }
+    
+    // In GodMode, apply subtle pulsing to all projects
+    if (viewMode === "godmode" && groupRef.current) {
+      const time = state.clock.getElapsedTime();
+      
+      // Apply to project nodes (skip the central node)
+      projects.forEach((_, index) => {
+        if (index !== hovered) { // Don't override the hovered animation
+          const projectNode = groupRef.current?.children[index + 1]; // +1 because of the central node
+          if (projectNode) {
+            // Offset the time for each project to create a wave effect
+            const offsetTime = time + index * 0.2;
+            const baseScale = 1 + Math.sin(offsetTime * 1.5) * 0.03;
+            projectNode.scale.set(baseScale, baseScale, baseScale);
+          }
+        }
+      });
+      
+      // Record interaction periodically in GodMode to track engagement
+      if (Math.floor(time) % 5 === 0 && Math.floor(time * 10) % 10 === 0) {
+        recordInteraction();
       }
     }
   });

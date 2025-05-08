@@ -23,7 +23,7 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
   const controlsRef = useRef<any>(null);
   const [targetPosition] = useState(new THREE.Vector3(0, 10, 20));
   const [targetLookAt] = useState(new THREE.Vector3(0, 0, 0));
-  const { phase } = useGame();
+  const { phase, viewMode, setNavPosition } = useGame();
   const isMobile = useIsMobile();
   
   // Extract keyboard controls for desktop
@@ -136,30 +136,57 @@ const ThreeScene: React.FC<ThreeSceneProps> = ({ activeView }) => {
     };
   }, [isMobile, targetPosition, targetLookAt, touchStartPos]);
   
-  // Position the camera based on the active view
+  // Position the camera based on the active view and viewMode
   useEffect(() => {
     // More aggressive adjustments for mobile devices
     // Both bring camera closer and adjust height for better perspective
     const mobileFactor = isMobile ? 0.7 : 1;
     const mobileHeightAdjust = isMobile ? 1.2 : 1; // Slightly higher viewing angle on mobile
     
+    // Apply GodMode camera positioning if enabled (higher, wider view)
+    const godModeFactor = viewMode === "godmode" ? 1.5 : 1;
+    const godModeHeight = viewMode === "godmode" ? 1.8 : 1;
+    
     if (activeView === "universe") {
-      targetPosition.set(0, 10 * mobileHeightAdjust, 20 * mobileFactor);
+      targetPosition.set(
+        0, 
+        10 * mobileHeightAdjust * godModeHeight, 
+        20 * mobileFactor * godModeFactor
+      );
       targetLookAt.set(0, 0, 0);
     } else if (activeView === "timeline") {
-      targetPosition.set(0, 5 * mobileHeightAdjust, 15 * mobileFactor);
+      targetPosition.set(
+        0, 
+        5 * mobileHeightAdjust * godModeHeight, 
+        15 * mobileFactor * godModeFactor
+      );
       targetLookAt.set(0, 0, -5 * mobileFactor);
     } else if (activeView === "assistant") {
-      targetPosition.set(5 * mobileFactor, 2 * mobileHeightAdjust, 10 * mobileFactor);
+      targetPosition.set(
+        5 * mobileFactor * godModeFactor, 
+        2 * mobileHeightAdjust * godModeHeight, 
+        10 * mobileFactor * godModeFactor
+      );
       targetLookAt.set(0, 0, 0);
     } else if (activeView === "stats") {
-      targetPosition.set(-5 * mobileFactor, 8 * mobileHeightAdjust, 15 * mobileFactor);
+      targetPosition.set(
+        -5 * mobileFactor * godModeFactor, 
+        8 * mobileHeightAdjust * godModeHeight, 
+        15 * mobileFactor * godModeFactor
+      );
       targetLookAt.set(0, 0, 0);
     }
     
+    // Store current nav position in game state for persistence
+    setNavPosition({
+      x: targetPosition.x,
+      y: targetPosition.y,
+      z: targetPosition.z
+    });
+    
     // Log the camera position change for debugging
     console.log(`Camera position changing to: ${targetPosition.x}, ${targetPosition.y}, ${targetPosition.z}`);
-  }, [activeView, targetPosition, targetLookAt, isMobile]);
+  }, [activeView, targetPosition, targetLookAt, isMobile, viewMode, setNavPosition]);
   
   // Handle camera movement using keyboard controls
   useFrame((state, delta) => {

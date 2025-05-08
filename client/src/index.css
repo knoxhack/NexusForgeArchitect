@@ -28,3 +28,20 @@ canvas {
   height: 100% !important;
   touch-action: none;
 }
+
+/* Animation for pulsing elements */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+}
+
+.pulse-animation {
+  animation: pulse 1.5s infinite;
+}

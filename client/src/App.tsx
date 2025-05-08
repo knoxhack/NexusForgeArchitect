@@ -10,6 +10,7 @@ import AIAssistant from "./components/AIAssistant";
 import Timeline from "./components/Timeline";
 import ProjectManager from "./components/ProjectManager";
 import CreatorStats from "./components/CreatorStats";
+import GodMode from "./components/GodMode";
 import { useAudio } from "./lib/stores/useAudio";
 import { useGame } from "./lib/stores/useGame";
 import { useIsMobile } from "./hooks/use-is-mobile";
@@ -162,6 +163,9 @@ function App() {
                     </div>
                   </KeyboardControls>
                 )}
+                
+                {/* God Mode Features */}
+                <GodMode />
               </div>
             }
           />
