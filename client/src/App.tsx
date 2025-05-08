@@ -38,7 +38,7 @@ const controls = [
 function App() {
   const [activeView, setActiveView] = useState<ViewType>("universe");
   const [showCanvas, setShowCanvas] = useState(false);
-  const { phase, setViewMode } = useGame();
+  const { phase } = useGame();
   const isMobile = useIsMobile();
   const { addNotification } = useNotifications();
   
@@ -50,7 +50,6 @@ function App() {
     setErrorSound,
     setNotificationSound, 
     startBackgroundMusic,
-    playSuccess,
     isMuted 
   } = useAudio();
   
@@ -131,37 +130,7 @@ function App() {
     return () => clearTimeout(timer);
   }, [addNotification]);
   
-  // Keyboard handler for G key to toggle God Mode
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Toggle God Mode with G key
-      if (e.code === 'KeyG') {
-        const { viewMode } = useGame.getState();
-        
-        // Toggle the view mode
-        if (viewMode === 'godmode') {
-          setViewMode('default');
-        } else {
-          setViewMode('godmode');
-          
-          // Add notification for activation
-          addNotification({
-            title: "God Mode Activated",
-            message: "System monitoring and advanced controls are now available.",
-            type: "success",
-            priority: "medium",
-            source: "System Core"
-          });
-        }
-        
-        // Play a success sound
-        playSuccess();
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setViewMode, playSuccess, addNotification]);
+  // Keyboard controls are handled in the GodMode component
   
   return (
     <Router>
