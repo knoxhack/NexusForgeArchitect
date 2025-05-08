@@ -100,7 +100,9 @@ const NotificationsPanel: React.FC = () => {
           {unreadCount > 0 && (
             <Badge 
               variant="destructive"
-              className="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] flex items-center justify-center p-0 text-[0.65rem]"
+              className={`absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] flex items-center justify-center p-0 text-[0.65rem] ${
+                unreadCount > 3 ? 'flash-animation' : ''
+              }`}
             >
               {unreadCount}
             </Badge>
@@ -135,7 +137,9 @@ const NotificationsPanel: React.FC = () => {
               {sortedNotifications.map((notification) => (
                 <div 
                   key={notification.id}
-                  className={`p-2 text-xs ${notification.read ? 'bg-transparent' : 'bg-cyan-950/20'} hover:bg-cyan-900/20 cursor-pointer`}
+                  className={`p-2 text-xs ${notification.read ? 'bg-transparent' : 'bg-cyan-950/20'} hover:bg-cyan-900/20 cursor-pointer ${
+                    !notification.read && notification.priority === 'critical' ? 'critical-notification' : ''
+                  }`}
                   onClick={() => handleViewNotification(notification)}
                 >
                   <div className="flex justify-between items-start mb-1">

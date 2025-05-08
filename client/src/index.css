@@ -45,3 +45,31 @@ canvas {
 .pulse-animation {
   animation: pulse 1.5s infinite;
 }
+
+/* Notification badge flashing animation */
+@keyframes flash {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.flash-animation {
+  animation: flash 2s infinite;
+}
+
+/* Critical notification glow effect */
+@keyframes critical-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.9);
+  }
+}
+
+.critical-notification {
+  animation: critical-glow 1.5s infinite;
+}

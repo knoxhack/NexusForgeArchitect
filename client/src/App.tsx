@@ -14,6 +14,7 @@ import GodMode from "./components/GodMode";
 import { useAudio } from "./lib/stores/useAudio";
 import { useGame } from "./lib/stores/useGame";
 import { useIsMobile } from "./hooks/use-is-mobile";
+import { useNotifications } from "./lib/stores/useNotifications";
 import "@fontsource/inter";
 
 // Define view types
@@ -36,8 +37,9 @@ const controls = [
 function App() {
   const [activeView, setActiveView] = useState<ViewType>("universe");
   const [showCanvas, setShowCanvas] = useState(false);
-  const { phase } = useGame();
+  const { phase, setViewMode } = useGame();
   const isMobile = useIsMobile();
+  const { addNotification } = useNotifications();
   
   // Audio setup
   const { 
