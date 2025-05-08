@@ -12,10 +12,12 @@ import { useGame } from "@/lib/stores/useGame";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Separator } from "./ui/separator";
 import { CheckCircle2, Lightbulb, Lock, Rocket, Sparkles, Star } from "lucide-react";
+import { useAudio } from "@/lib/stores/useAudio";
 
 export function WelcomeModal() {
   const [isOpen, setIsOpen] = useState(false);
   const { tutorialCompleted, completeTutorial } = useGame();
+  const { playSuccess } = useAudio();
   
   // Show welcome modal if tutorial hasn't been completed
   useEffect(() => {
@@ -32,6 +34,7 @@ export function WelcomeModal() {
   const handleClose = () => {
     setIsOpen(false);
     completeTutorial();
+    playSuccess();
   };
   
   return (
