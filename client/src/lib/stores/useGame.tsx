@@ -13,6 +13,10 @@ interface GameState {
   navPosition: { x: number; y: number; z: number };
   initialized: boolean;
   notifications: boolean;
+  tutorialCompleted: boolean;
+  accessibilityMode: boolean;
+  highContrastMode: boolean;
+  reducedMotion: boolean;
   
   // Actions
   start: () => void;
@@ -23,6 +27,11 @@ interface GameState {
   setNavPosition: (pos: { x: number; y: number; z: number }) => void;
   setInitialized: (value: boolean) => void;
   toggleNotifications: () => void;
+  completeTutorial: () => void;
+  toggleAccessibilityMode: () => void;
+  toggleHighContrastMode: () => void;
+  toggleReducedMotion: () => void;
+  resetAccessibilitySettings: () => void;
 }
 
 export const useGame = create<GameState>()(
@@ -35,6 +44,10 @@ export const useGame = create<GameState>()(
       navPosition: { x: 0, y: 10, z: 20 },
       initialized: false,
       notifications: true,
+      tutorialCompleted: false,
+      accessibilityMode: false,
+      highContrastMode: false,
+      reducedMotion: false,
       
       start: () => {
         set((state) => {
@@ -100,6 +113,56 @@ export const useGame = create<GameState>()(
           notifications: !state.notifications,
           lastInteraction: Date.now()
         }));
+      },
+      
+      completeTutorial: () => {
+        set((state) => ({
+          tutorialCompleted: true,
+          lastInteraction: Date.now(),
+          interactionCount: state.interactionCount + 1
+        }));
+      },
+      
+      toggleAccessibilityMode: () => {
+        set((state) => ({
+          accessibilityMode: !state.accessibilityMode,
+          lastInteraction: Date.now()
+        }));
+      },
+      
+      toggleHighContrastMode: () => {
+        set((state) => ({
+          highContrastMode: !state.highContrastMode,
+          lastInteraction: Date.now()
+        }));
+        
+        // Apply high contrast to the document
+        const htmlElement = document.documentElement;
+        htmlElement.classList.toggle('high-contrast');
+      },
+      
+      toggleReducedMotion: () => {
+        set((state) => ({
+          reducedMotion: !state.reducedMotion,
+          lastInteraction: Date.now()
+        }));
+        
+        // Apply reduced motion to the document
+        const htmlElement = document.documentElement;
+        htmlElement.classList.toggle('reduced-motion');
+      },
+      
+      resetAccessibilitySettings: () => {
+        set((state) => ({
+          accessibilityMode: false,
+          highContrastMode: false,
+          reducedMotion: false,
+          lastInteraction: Date.now()
+        }));
+        
+        // Remove all accessibility classes from the document
+        const htmlElement = document.documentElement;
+        htmlElement.classList.remove('high-contrast', 'reduced-motion');
       }
     })),
     {
@@ -108,7 +171,11 @@ export const useGame = create<GameState>()(
         viewMode: state.viewMode,
         interactionCount: state.interactionCount,
         initialized: state.initialized,
-        notifications: state.notifications
+        notifications: state.notifications,
+        tutorialCompleted: state.tutorialCompleted,
+        accessibilityMode: state.accessibilityMode,
+        highContrastMode: state.highContrastMode,
+        reducedMotion: state.reducedMotion
       }),
     }
   )
