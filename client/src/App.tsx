@@ -15,6 +15,8 @@ import OnboardingTutorial from "./components/OnboardingTutorial";
 import AccessibilitySettings from "./components/AccessibilitySettings";
 import ContextualHelp from "./components/ContextualHelp";
 import UserPreferences from "./components/UserPreferences";
+import ShortcutGuide from "./components/ShortcutGuide";
+import SystemStatus from "./components/SystemStatus";
 import { useAudio } from "./lib/stores/useAudio";
 import { useGame } from "./lib/stores/useGame";
 import { useIsMobile } from "./hooks/use-is-mobile";
@@ -229,6 +231,12 @@ function App() {
                 
                 {/* User Preferences */}
                 <UserPreferences />
+                
+                {/* Keyboard Shortcut Guide */}
+                <ShortcutGuide />
+                
+                {/* System Status */}
+                <SystemStatus />
               </div>
             }
           />
