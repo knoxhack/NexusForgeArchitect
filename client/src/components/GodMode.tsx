@@ -10,7 +10,7 @@ import { Mic, BarChart3, Database, Cpu } from "lucide-react";
 // This includes voice commands, advanced visualizations, and analytics
 const GodMode: React.FC = () => {
   const { viewMode, setViewMode, recordInteraction, interactionCount } = useGame();
-  const { playSuccess } = useAudio();
+  const { playSuccess, playError, playNotification } = useAudio();
   const { projects } = useProjects();
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -69,18 +69,27 @@ const GodMode: React.FC = () => {
       duration: 3000,
     });
     
+    playNotification(); // Play notification sound when starting to listen
+    
     // Simulate a timeout for processing
     const timeout = setTimeout(() => {
       // Simulate a successful command
       setTranscript("Activate God Mode");
-      playSuccess();
       
       // Apply the mode change
       if (viewMode !== "godmode") {
         setViewMode("godmode");
+        playSuccess();
         toast.success("God Mode activated", {
           description: "Advanced visualization and analytics enabled",
           duration: 4000,
+        });
+      } else {
+        // Already in God Mode - show error
+        playError();
+        toast.error("God Mode already active", {
+          description: "Try a different command",
+          duration: 3000
         });
       }
       
@@ -89,7 +98,7 @@ const GodMode: React.FC = () => {
     }, 2000);
     
     return () => clearTimeout(timeout);
-  }, [listening, playSuccess, setViewMode, viewMode]);
+  }, [listening, playSuccess, playError, playNotification, setViewMode, viewMode]);
   
   return (
     <div className="fixed bottom-16 right-4 z-50">
@@ -142,7 +151,13 @@ const GodMode: React.FC = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                   const status = stats.cpu > 90 ? "Critical" : stats.cpu > 75 ? "High" : "Normal";
-                  toast.info(`CPU load: ${status} (${stats.cpu}%)`);
+                  if (stats.cpu > 90) {
+                    playError();
+                    toast.error(`CPU load: ${status} (${stats.cpu}%)`);
+                  } else {
+                    playNotification();
+                    toast.info(`CPU load: ${status} (${stats.cpu}%)`);
+                  }
                 }}
               >
                 <span className="flex items-center gap-1">
@@ -158,7 +173,13 @@ const GodMode: React.FC = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                   const status = stats.gpu > 90 ? "Critical" : stats.gpu > 75 ? "High" : "Normal";
-                  toast.info(`GPU load: ${status} (${stats.gpu}%)`);
+                  if (stats.gpu > 90) {
+                    playError();
+                    toast.error(`GPU load: ${status} (${stats.gpu}%)`);
+                  } else {
+                    playNotification();
+                    toast.info(`GPU load: ${status} (${stats.gpu}%)`);
+                  }
                 }}
               >
                 <span>GPU</span>
@@ -186,8 +207,16 @@ const GodMode: React.FC = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                   const status = stats.fps < 30 ? "Low" : stats.fps < 45 ? "Medium" : "High";
-                  toast.info(`Framerate: ${status} (${stats.fps} FPS)`);
-                  playSuccess();
+                  if (stats.fps < 30) {
+                    playError();
+                    toast.error(`Framerate: ${status} (${stats.fps} FPS)`);
+                  } else if (stats.fps > 55) {
+                    playSuccess();
+                    toast.success(`Framerate: ${status} (${stats.fps} FPS)`);
+                  } else {
+                    playNotification();
+                    toast.info(`Framerate: ${status} (${stats.fps} FPS)`);
+                  }
                 }}
               >
                 <span className="flex items-center gap-1">

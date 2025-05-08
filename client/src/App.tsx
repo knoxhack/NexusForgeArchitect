@@ -43,7 +43,9 @@ function App() {
   const { 
     setBackgroundMusic, 
     setHitSound, 
-    setSuccessSound, 
+    setSuccessSound,
+    setErrorSound,
+    setNotificationSound, 
     startBackgroundMusic, 
     isMuted 
   } = useAudio();
@@ -55,11 +57,15 @@ function App() {
       const bgMusic = new Audio("/sounds/background.mp3");
       const hit = new Audio("/sounds/hit.mp3");
       const success = new Audio("/sounds/success.mp3");
+      const error = new Audio("/sounds/error.mp3");
+      const notification = new Audio("/sounds/notification.mp3");
       
       // Set up audio with our store functions
       setBackgroundMusic(bgMusic);
       setHitSound(hit);
       setSuccessSound(success);
+      setErrorSound(error);
+      setNotificationSound(notification);
       
       // Start background music automatically if not muted
       if (!isMuted) {
@@ -78,7 +84,7 @@ function App() {
       document.removeEventListener("click", handleInteraction);
       document.removeEventListener("keydown", handleInteraction);
     };
-  }, [setBackgroundMusic, setHitSound, setSuccessSound, startBackgroundMusic, isMuted]);
+  }, [setBackgroundMusic, setHitSound, setSuccessSound, setErrorSound, setNotificationSound, startBackgroundMusic, isMuted]);
   
   // Show the canvas once everything is loaded
   useEffect(() => {
