@@ -4,6 +4,20 @@ import { persist } from "zustand/middleware";
 
 export type GamePhase = "ready" | "playing" | "ended";
 export type ViewMode = "default" | "godmode" | "focus" | "analytics";
+export type NodeType = "project" | "fusion" | "resource" | "connection";
+
+export interface UniverseNode {
+  id: string;
+  type: NodeType;
+  name: string;
+  position: { x: number; y: number; z: number };
+  scale: number;
+  color: string;
+  connections: string[]; // IDs of connected nodes
+  dateCreated: string;
+  lastModified: string;
+  metadata?: Record<string, any>;
+}
 
 interface GameState {
   phase: GamePhase;
@@ -17,6 +31,8 @@ interface GameState {
   accessibilityMode: boolean;
   highContrastMode: boolean;
   reducedMotion: boolean;
+  universeNodes: UniverseNode[];
+  selectedNodeId: string | null;
   
   // Actions
   start: () => void;
@@ -32,6 +48,14 @@ interface GameState {
   toggleHighContrastMode: () => void;
   toggleReducedMotion: () => void;
   resetAccessibilitySettings: () => void;
+  
+  // Universe nodes actions
+  addNode: (node: UniverseNode) => void;
+  removeNode: (id: string) => void;
+  updateNode: (id: string, updates: Partial<UniverseNode>) => void;
+  connectNodes: (sourceId: string, targetId: string) => void;
+  disconnectNodes: (sourceId: string, targetId: string) => void;
+  selectNode: (id: string | null) => void;
 }
 
 export const useGame = create<GameState>()(
@@ -48,6 +72,8 @@ export const useGame = create<GameState>()(
       accessibilityMode: false,
       highContrastMode: false,
       reducedMotion: false,
+      universeNodes: [],
+      selectedNodeId: null,
       
       start: () => {
         set((state) => {
@@ -163,6 +189,116 @@ export const useGame = create<GameState>()(
         // Remove all accessibility classes from the document
         const htmlElement = document.documentElement;
         htmlElement.classList.remove('high-contrast', 'reduced-motion');
+      },
+      
+      // Universe nodes methods
+      addNode: (node: UniverseNode) => {
+        set((state) => {
+          // Check if node with this ID already exists
+          const exists = state.universeNodes.some(n => n.id === node.id);
+          if (exists) return {}; // Don't add duplicate nodes
+          
+          return {
+            universeNodes: [...state.universeNodes, node],
+            lastInteraction: Date.now(),
+            interactionCount: state.interactionCount + 1
+          };
+        });
+      },
+      
+      removeNode: (id: string) => {
+        set((state) => {
+          // Filter out the node with the given ID
+          const filteredNodes = state.universeNodes.filter(node => node.id !== id);
+          
+          // Also update any connections that might reference this node
+          const updatedNodes = filteredNodes.map(node => ({
+            ...node,
+            connections: node.connections.filter(connectionId => connectionId !== id)
+          }));
+          
+          return {
+            universeNodes: updatedNodes,
+            // If the removed node was selected, clear selection
+            selectedNodeId: state.selectedNodeId === id ? null : state.selectedNodeId,
+            lastInteraction: Date.now(),
+            interactionCount: state.interactionCount + 1
+          };
+        });
+      },
+      
+      updateNode: (id: string, updates: Partial<UniverseNode>) => {
+        set((state) => {
+          const updatedNodes = state.universeNodes.map(node => 
+            node.id === id ? { ...node, ...updates, lastModified: new Date().toISOString() } : node
+          );
+          
+          return {
+            universeNodes: updatedNodes,
+            lastInteraction: Date.now(),
+            interactionCount: state.interactionCount + 1
+          };
+        });
+      },
+      
+      connectNodes: (sourceId: string, targetId: string) => {
+        set((state) => {
+          // Make sure both nodes exist and are not the same
+          if (sourceId === targetId) return {};
+          
+          const sourceExists = state.universeNodes.some(node => node.id === sourceId);
+          const targetExists = state.universeNodes.some(node => node.id === targetId);
+          
+          if (!sourceExists || !targetExists) return {};
+          
+          // Update the connections for the source node if not already connected
+          const updatedNodes = state.universeNodes.map(node => {
+            if (node.id === sourceId && !node.connections.includes(targetId)) {
+              return {
+                ...node,
+                connections: [...node.connections, targetId],
+                lastModified: new Date().toISOString()
+              };
+            }
+            return node;
+          });
+          
+          return {
+            universeNodes: updatedNodes,
+            lastInteraction: Date.now(),
+            interactionCount: state.interactionCount + 1
+          };
+        });
+      },
+      
+      disconnectNodes: (sourceId: string, targetId: string) => {
+        set((state) => {
+          // Update the connections for the source node
+          const updatedNodes = state.universeNodes.map(node => {
+            if (node.id === sourceId) {
+              return {
+                ...node,
+                connections: node.connections.filter(id => id !== targetId),
+                lastModified: new Date().toISOString()
+              };
+            }
+            return node;
+          });
+          
+          return {
+            universeNodes: updatedNodes,
+            lastInteraction: Date.now(),
+            interactionCount: state.interactionCount + 1
+          };
+        });
+      },
+      
+      selectNode: (id: string | null) => {
+        set((state) => ({
+          selectedNodeId: id,
+          lastInteraction: Date.now(),
+          interactionCount: state.interactionCount + 1
+        }));
       }
     })),
     {
@@ -175,7 +311,9 @@ export const useGame = create<GameState>()(
         tutorialCompleted: state.tutorialCompleted,
         accessibilityMode: state.accessibilityMode,
         highContrastMode: state.highContrastMode,
-        reducedMotion: state.reducedMotion
+        reducedMotion: state.reducedMotion,
+        universeNodes: state.universeNodes,
+        selectedNodeId: state.selectedNodeId
       }),
     }
   )

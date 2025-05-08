@@ -19,10 +19,10 @@ interface UniverseProps {
 const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => {
   const { projects, selectedProject, selectProject } = useProjects();
   const { aiPersonas } = useAIAssistant();
-  const { viewMode, recordInteraction } = useGame();
+  const { viewMode, recordInteraction, universeNodes, selectedNodeId, selectNode } = useGame();
   const groupRef = useRef<THREE.Group>(null);
   const { playHit } = useAudio();
-  const [hovered, setHovered] = useState<number | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
   
   // Load textures
   const sandTexture = useTexture("/textures/sand.jpg");
@@ -96,15 +96,32 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
     return connections;
   }, [projects, projectPositions]);
   
+  // Add fusion nodes
+  const fusionNodes = useMemo(() => {
+    return universeNodes.filter(node => node.type === "fusion");
+  }, [universeNodes]);
+  
   // Handle select key press
   const select = useKeyboardControls((state) => state.select);
   useEffect(() => {
     if (select && hovered !== null) {
-      selectProject(projects[hovered].id);
-      playHit();
-      console.log(`Selected project: ${projects[hovered].title}`);
+      // Check if it's a project ID or a node ID
+      const projectIndex = projects.findIndex(p => p.id === hovered);
+      if (projectIndex !== -1) {
+        selectProject(hovered);
+        playHit();
+        console.log(`Selected project: ${projects[projectIndex].title}`);
+      } else {
+        // Try to find in fusion nodes
+        const fusionNode = universeNodes.find(node => node.id === hovered);
+        if (fusionNode) {
+          selectNode(hovered);
+          playHit();
+          console.log(`Selected fusion node: ${fusionNode.name}`);
+        }
+      }
     }
-  }, [select, hovered, selectProject, projects, playHit]);
+  }, [select, hovered, selectProject, selectNode, projects, universeNodes, playHit]);
   
   // Animation for the universe rotation
   useFrame((state, delta) => {
@@ -191,7 +208,7 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
               selectProject(project.id);
               playHit();
             }}
-            onPointerOver={() => setHovered(index)}
+            onPointerOver={() => setHovered(project.id)}
             onPointerOut={() => setHovered(null)}
           >
             {/* Project sphere */}

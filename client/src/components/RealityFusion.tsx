@@ -531,16 +531,47 @@ export default function RealityFusion() {
                 </Button>
                 <Button
                   onClick={() => {
-                    playSuccess();
-                    setShowResult(false);
-                    clearSelection();
-                    addNotification({
-                      title: "Fusion Exported",
-                      message: "The fusion result has been exported to your project resources.",
-                      type: "success",
-                      priority: "medium",
-                      source: "Reality Fusion"
-                    });
+                    if (currentFusion) {
+                      // Get random coordinates within a reasonable range in the universe
+                      const randomPosition = {
+                        x: -10 + Math.random() * 20,
+                        y: -5 + Math.random() * 10,
+                        z: -10 + Math.random() * 20
+                      };
+                      
+                      // Create a universe node from the fusion
+                      const { addNode } = useGame.getState();
+                      
+                      // Add the node to the universe
+                      addNode({
+                        id: currentFusion.id,
+                        type: "fusion",
+                        name: currentFusion.name,
+                        position: randomPosition,
+                        scale: 1.5, // Slightly larger than normal nodes
+                        color: "#7c3aed", // Purple for fusion nodes
+                        connections: [],
+                        dateCreated: currentFusion.dateCreated,
+                        lastModified: new Date().toISOString(),
+                        metadata: {
+                          description: currentFusion.description,
+                          compatibility: currentFusion.compatibility,
+                          sourceDataIds: currentFusion.sourceDataIds
+                        }
+                      });
+                      
+                      // Play success sound and notify user
+                      playSuccess();
+                      setShowResult(false);
+                      clearSelection();
+                      addNotification({
+                        title: "Fusion Exported",
+                        message: "The fusion result has been exported to the universe as a node.",
+                        type: "success",
+                        priority: "medium",
+                        source: "Reality Fusion"
+                      });
+                    }
                   }}
                 >
                   <Upload className="h-4 w-4 mr-2" />
