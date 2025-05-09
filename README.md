@@ -164,6 +164,29 @@ npm run dev
 
 6. Access the application at http://localhost:5000
 
+## Security and Sensitive Files
+
+NEXUSFORGE OS takes security seriously. We've implemented several practices to ensure your sensitive data remains protected:
+
+### Environment Variables
+- All sensitive configuration is stored in environment variables (.env files)
+- Never commit .env files to the repository (they're listed in .gitignore)
+- A template .env.example file is provided as a reference
+- Always use environment variables for secrets, API keys, and credentials
+
+### Sensitive Data
+- Database credentials are configured via environment variables
+- API keys are securely stored and never exposed in client-side code
+- User passwords are hashed before storage
+- Session tokens are securely generated and managed
+
+### Secure Development Practices
+- Regular security updates for all dependencies
+- Input validation to prevent injection attacks
+- CORS configuration to limit cross-origin requests
+- Content Security Policy implementation
+- Rate limiting on sensitive endpoints
+
 ## Keyboard Shortcuts
 
 - `G` - Toggle God Mode
