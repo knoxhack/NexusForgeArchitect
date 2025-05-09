@@ -1,7 +1,15 @@
 import React, { useRef, useMemo, useEffect, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Text, useTexture, Html, useKeyboardControls, OrbitControls } from "@react-three/drei";
+import { 
+  Text, 
+  useTexture, 
+  Html, 
+  useKeyboardControls, 
+  OrbitControls,
+  Stars
+} from "@react-three/drei";
 import * as THREE from "three";
+import { gsap } from "gsap";
 import { useProjects } from "@/lib/stores/useProjects";
 import { useAIAssistant } from "@/lib/stores/useAIAssistant";
 import { useAudio } from "@/lib/stores/useAudio";
@@ -284,6 +292,9 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
   
   return (
     <>
+      {/* Cosmic background */}
+      <Stars radius={100} depth={50} count={viewMode === "godmode" ? 10000 : 5000} factor={4} fade speed={0.5} />
+      
       {/* Orbit controls for user interaction */}
       {activeView === "universe" && (
         <OrbitControls
@@ -303,7 +314,7 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
       
       {/* Main universe group */}
       <group ref={groupRef}>
-        {/* Central hub/core of the universe */}
+        {/* Central hub/core of the universe with animated rings */}
         <mesh position={[0, 0, 0]}>
           <sphereGeometry args={[1.5, 32, 32]} />
           <meshStandardMaterial 
@@ -313,6 +324,18 @@ const Universe: React.FC<UniverseProps> = ({ activeView, isMobile = false }) => 
             metalness={0.8}
             roughness={0.2}
           />
+        </mesh>
+        
+        {/* Core rings - horizontal */}
+        <mesh position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
+          <ringGeometry args={[2.0, 2.1, 32]} />
+          <meshBasicMaterial color={coreColor} transparent opacity={0.6} />
+        </mesh>
+        
+        {/* Core rings - diagonal */}
+        <mesh position={[0, 0, 0]} rotation={[Math.PI/4, Math.PI/6, 0]}>
+          <ringGeometry args={[2.5, 2.6, 32]} />
+          <meshBasicMaterial color={coreColor} transparent opacity={0.3} />
         </mesh>
         
         {/* Project nodes */}

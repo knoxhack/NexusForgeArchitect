@@ -57,7 +57,7 @@
     "express-session": "^1.18.1",
     "framer-motion": "^11.18.2",
     "gl-matrix": "^3.4.3",
-    "gsap": "^3.12.5",
+    "gsap": "^3.13.0",
     "howler": "^2.2.4",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.453.0",
