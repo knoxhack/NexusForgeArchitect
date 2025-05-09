@@ -154,6 +154,17 @@ function App() {
           source: "Reality Core"
         });
       }, 15000);
+      
+      // Neural Layer hint
+      setTimeout(() => {
+        addNotification({
+          title: "Creator Neural Layer Active",
+          message: "Your Neural Layer is ready to optimize your workflow based on emotional states and productivity patterns.",
+          type: "success",
+          priority: "high",
+          source: "Neural Core"
+        });
+      }, 20000);
     }, 2000);
     
     return () => clearTimeout(timer);
@@ -270,7 +281,7 @@ function App() {
                 {activeView === "universe" && <UniverseSidebar />}
                 
                 {/* Reality Fusion Lab */}
-                <div className="fixed bottom-4 right-4 z-50">
+                <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button 
@@ -283,6 +294,22 @@ function App() {
                     </DialogTrigger>
                     <DialogContent className="max-w-5xl h-[80vh] p-0">
                       <RealityFusion />
+                    </DialogContent>
+                  </Dialog>
+                  
+                  {/* Neural Layer Access */}
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        className="rounded-full shadow-lg flex items-center gap-2 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
+                        onClick={() => playNotification()}
+                      >
+                        <Brain className="h-4 w-4" />
+                        <span>Neural Layer</span>
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-5xl h-[80vh] p-0 overflow-y-auto">
+                      <CreatorNeuralLayer />
                     </DialogContent>
                   </Dialog>
                 </div>
